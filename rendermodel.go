@@ -47,38 +47,48 @@ func (e *EmptyRenderModel) SetRequestPaintFunc(f func()) {
 type BasicRenderModel struct {
 	EmptyRenderModel
 
-	requestRender chan interface{}
-	needsRender   bool
-	rendering     bool
-	img           image.Image
+	RequestRender chan interface{}
+	NeedsRender   bool
+	Rendering     bool
+	Img           image.Image
 
 	InnerRender func()
 }
 
 func (m *BasicRenderModel) Render(img *image.RGBA) {
 	m.Lock()
-	rendering := m.rendering
-	if !(m.img == nil) {
-		r := m.img.Bounds()
-		draw.Draw(img, r, m.img, image.ZP, draw.Src)
+	rendering := m.Rendering
+	if !(m.Img == nil) && !(img == nil) {
+		r := m.Img.Bounds()
+		r2 := img.Bounds()
+		mx := r.Dx()
+		my := r.Dy()
+		if r2.Dx() < mx {
+			mx = r2.Dx()
+		}
+		if r2.Dy() < my {
+			my = r2.Dy()
+		}
+		r3 := image.Rect(0, 0, mx, my)
+		draw.Draw(img, r3, m.Img, image.ZP, draw.Src)
 	}
 	m.Unlock()
 	if !rendering {
-		m.requestRender <- true
-		m.needsRender = false
+		m.RequestRender <- true
+		m.NeedsRender = false
 	} else {
-		m.needsRender = true
+		m.NeedsRender = true
 	}
 }
 
 func (m *BasicRenderModel) GoRender() {
 	for {
 		select {
-		case <-m.requestRender:
+		case <-m.RequestRender:
 			if !(m.InnerRender == nil) {
 				m.InnerRender()
-				if m.needsRender {
-					m.needsRender = false
+				if m.NeedsRender {
+					m.NeedsRender = false
 					m.InnerRender()
 				}
 			}
@@ -91,7 +101,7 @@ func NewBasicRenderModel() *BasicRenderModel {
 		EmptyRenderModel: EmptyRenderModel{
 			Params: make([]RenderParameter, 0, 10),
 		},
-		requestRender: make(chan interface{}, 10),
+		RequestRender: make(chan interface{}, 10),
 	}
 	go m.GoRender()
 	return &m

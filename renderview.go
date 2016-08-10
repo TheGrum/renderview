@@ -30,6 +30,8 @@ func MainLoop(s screen.Screen, r RenderModel) {
 	right = r.GetParameter("right")
 	bottom = r.GetParameter("bottom")
 	zoom = r.GetParameter("zoom")
+	mouseX := r.GetParameter("mouseX")
+	mouseY := r.GetParameter("mouseY")
 
 	leftIsFloat64 := left.GetType() == "float64"
 	zoomIsFloat64 := zoom.GetType() == "float64"
@@ -49,6 +51,10 @@ func MainLoop(s screen.Screen, r RenderModel) {
 	}()
 
 	r.SetRequestPaintFunc(func() {
+		if buf == nil || r == nil || w == nil {
+			return
+		}
+		r.Render(buf.RGBA())
 		w.Send(paint.Event{})
 	})
 
@@ -70,6 +76,9 @@ func MainLoop(s screen.Screen, r RenderModel) {
 
 		case mouse.Event:
 			//fmt.Printf("mouse pos(%v)\n", e)
+			mouseX.SetValueFloat64(float64(e.X))
+			mouseY.SetValueFloat64(float64(e.Y))
+
 			if dragging == false && e.Direction == mouse.DirPress && e.Button == mouse.ButtonLeft {
 				//				fmt.Printf("mouse down left(%v)\n", e)
 				sx = e.X
