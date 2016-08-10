@@ -2,7 +2,6 @@ package renderview
 
 import (
 	"image"
-	"image/draw"
 	"sync"
 )
 
@@ -11,7 +10,7 @@ type RenderModel interface {
 	Unlock()
 
 	GetParameter(name string) RenderParameter
-	Render(*image.RGBA)
+	Render() image.Image
 	SetRequestPaintFunc(func())
 }
 
@@ -32,8 +31,8 @@ func (e *EmptyRenderModel) GetParameter(name string) RenderParameter {
 	return &EmptyParameter{}
 }
 
-func (e *EmptyRenderModel) Render(i *image.RGBA) {
-	return
+func (e *EmptyRenderModel) Render() image.Image {
+	return nil
 }
 
 func (e *EmptyRenderModel) AddParameters(Params ...RenderParameter) {
@@ -55,30 +54,17 @@ type BasicRenderModel struct {
 	InnerRender func()
 }
 
-func (m *BasicRenderModel) Render(img *image.RGBA) {
+func (m *BasicRenderModel) Render() image.Image {
 	m.Lock()
+	defer m.Unlock()
 	rendering := m.Rendering
-	if !(m.Img == nil) && !(img == nil) {
-		r := m.Img.Bounds()
-		r2 := img.Bounds()
-		mx := r.Dx()
-		my := r.Dy()
-		if r2.Dx() < mx {
-			mx = r2.Dx()
-		}
-		if r2.Dy() < my {
-			my = r2.Dy()
-		}
-		r3 := image.Rect(0, 0, mx, my)
-		draw.Draw(img, r3, m.Img, image.ZP, draw.Src)
-	}
-	m.Unlock()
 	if !rendering {
 		m.RequestRender <- true
 		m.NeedsRender = false
 	} else {
 		m.NeedsRender = true
 	}
+	return m.Img
 }
 
 func (m *BasicRenderModel) GoRender() {

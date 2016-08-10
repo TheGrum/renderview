@@ -1,7 +1,9 @@
 package renderview
 
 import (
+	"fmt"
 	"image"
+	"image/draw"
 	"log"
 
 	"golang.org/x/exp/shiny/screen"
@@ -19,6 +21,7 @@ func GetMainLoop(r RenderModel) func(s screen.Screen) {
 }
 
 func MainLoop(s screen.Screen, r RenderModel) {
+	var needsPaint = false
 	var mouseIsDown = false
 	var dragging bool = false
 	var dx, dy float64
@@ -54,8 +57,8 @@ func MainLoop(s screen.Screen, r RenderModel) {
 		if buf == nil || r == nil || w == nil {
 			return
 		}
-		r.Render(buf.RGBA())
-		w.Send(paint.Event{})
+		needsPaint = true
+		//		w.Send(paint.Event{})
 	})
 
 	for {
@@ -132,7 +135,7 @@ func MainLoop(s screen.Screen, r RenderModel) {
 						top.SetValueInt(int(float64(top.GetValueInt()) - cy))
 						bottom.SetValueInt(int(float64(bottom.GetValueInt()) - cy))
 					}
-					r.Render(buf.RGBA())
+					Draw(r.Render(), buf.RGBA())
 
 					sx = e.X
 					sy = e.Y
@@ -154,10 +157,33 @@ func MainLoop(s screen.Screen, r RenderModel) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			r.Render(buf.RGBA())
+			Draw(r.Render(), buf.RGBA())
 		default:
 
 		}
+		if needsPaint {
+			needsPaint = false
+			Draw(r.Render(), buf.RGBA())
+			w.Send(paint.Event{})
+		}
+	}
+}
+
+func Draw(mimg image.Image, bimg *image.RGBA) {
+	if !(mimg == nil) && !(bimg == nil) {
+		r := mimg.Bounds()
+		r2 := bimg.Bounds()
+		mx := r.Dx()
+		my := r.Dy()
+		if r2.Dx() < mx {
+			mx = r2.Dx()
+		}
+		if r2.Dy() < my {
+			my = r2.Dy()
+		}
+		r3 := image.Rect(0, 0, mx, my)
+		fmt.Printf("r: %v, r2: %v, r3: %v\n", r, r2, r3)
+		draw.Draw(bimg, r3, mimg, image.ZP, draw.Src)
 	}
 }
 
