@@ -46,7 +46,7 @@ func innerRender(m *MandelView) {
 func NewMandelView() *rv.BasicRenderModel {
 	m := rv.NewBasicRenderModel()
 	m.InnerRender = getInnerRenderFunc((*MandelView)(m))
-	m.AddParameters(rv.NewFloat64RP("left", -2), rv.NewFloat64RP("top", -1), rv.NewFloat64RP("right", 0.5), rv.NewFloat64RP("bottom", 1), rv.NewIntRP("maxEsc", 100), rv.NewIntRP("width", 100), rv.NewIntRP("height", 100), rv.NewIntRP("red", 230), rv.NewIntRP("green", 235), rv.NewIntRP("blue", 255), rv.NewFloat64RP("mouseX", 0), rv.NewFloat64RP("mouseY", 0), NewZoomRP("zoom", 1, (*MandelView)(m)))
+	m.AddParameters(rv.NewFloat64RP("left", -2), rv.NewFloat64RP("top", -1), rv.NewFloat64RP("right", 0.5), rv.NewFloat64RP("bottom", 1), rv.NewIntRP("maxEsc", 100), rv.NewIntRP("width", 100), rv.NewIntRP("height", 100), rv.NewIntRP("red", 230), rv.NewIntRP("green", 235), rv.NewIntRP("blue", 255), rv.NewFloat64RP("mouseX", 0), rv.NewFloat64RP("mouseY", 0), rv.NewIntRP("zoom", 1), rv.NewIntRP("options", rv.OPT_AUTO_ZOOM))
 	go m.GoRender()
 	return m
 }

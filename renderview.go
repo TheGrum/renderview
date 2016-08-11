@@ -14,6 +14,14 @@ import (
 	"golang.org/x/mobile/event/size"
 )
 
+const (
+	OPT_NONE        = iota      // 0
+	OPT_CENTER_ZOOM = 1 << iota // 1
+	OPT_AUTO_ZOOM   = 1 << iota // 2
+)
+
+const ZOOM_RATE = 0.1
+
 func GetMainLoop(r RenderModel) func(s screen.Screen) {
 	return func(s screen.Screen) {
 		MainLoop(s, r)
@@ -35,6 +43,7 @@ func MainLoop(s screen.Screen, r RenderModel) {
 	zoom = r.GetParameter("zoom")
 	mouseX := r.GetParameter("mouseX")
 	mouseY := r.GetParameter("mouseY")
+	options := r.GetParameter("options")
 
 	leftIsFloat64 := left.GetType() == "float64"
 	zoomIsFloat64 := zoom.GetType() == "float64"
@@ -94,12 +103,56 @@ func MainLoop(s screen.Screen, r RenderModel) {
 				} else {
 					zoom.SetValueInt(zoom.GetValueInt() - 1)
 				}
+				if options.GetValueInt()&OPT_AUTO_ZOOM == OPT_AUTO_ZOOM || options.GetValueInt()&OPT_CENTER_ZOOM == OPT_CENTER_ZOOM {
+					mult := 1 + ZOOM_RATE
+					if leftIsFloat64 {
+
+						zwidth := right.GetValueFloat64() - left.GetValueFloat64()
+						zheight := bottom.GetValueFloat64() - top.GetValueFloat64()
+						nzwidth := zwidth * mult
+						nzheight := zheight * mult
+						cx := float64(e.X) / float64(buf.Size().X)
+						cy := float64(e.Y) / float64(buf.Size().Y)
+						if options.GetValueInt()&OPT_CENTER_ZOOM == OPT_CENTER_ZOOM {
+							cx = 0.5
+							cy = 0.5
+						}
+						fmt.Printf("zoomOut: mult: %v zwidth: %v nzwidth: %v cx: %v left: %v nleft: %v\n", mult, zwidth, nzwidth, cx, left.GetValueFloat64(), left.GetValueFloat64()-((nzwidth-zwidth)*cx))
+						left.SetValueFloat64(left.GetValueFloat64() - ((nzwidth - zwidth) * cx))
+						top.SetValueFloat64(top.GetValueFloat64() - ((nzheight - zheight) * cy))
+						right.SetValueFloat64(left.GetValueFloat64() + nzwidth)
+						bottom.SetValueFloat64(top.GetValueFloat64() + nzheight)
+						needsPaint = true
+
+					}
+				}
+
 			}
 			if e.Button == mouse.ButtonWheelUp {
 				if zoomIsFloat64 {
 					zoom.SetValueFloat64(zoom.GetValueFloat64() + 1)
 				} else {
 					zoom.SetValueInt(zoom.GetValueInt() + 1)
+				}
+				if options.GetValueInt()&OPT_AUTO_ZOOM == OPT_AUTO_ZOOM || options.GetValueInt()&OPT_CENTER_ZOOM == OPT_CENTER_ZOOM {
+					mult := 1 - ZOOM_RATE
+					if leftIsFloat64 {
+						zwidth := right.GetValueFloat64() - left.GetValueFloat64()
+						zheight := bottom.GetValueFloat64() - top.GetValueFloat64()
+						nzwidth := zwidth * mult
+						nzheight := zheight * mult
+						cx := float64(e.X) / float64(buf.Size().X)
+						cy := float64(e.Y) / float64(buf.Size().Y)
+						if options.GetValueInt()&OPT_CENTER_ZOOM == OPT_CENTER_ZOOM {
+							cx = 0.5
+							cy = 0.5
+						}
+						left.SetValueFloat64(left.GetValueFloat64() - ((nzwidth - zwidth) * cx))
+						top.SetValueFloat64(top.GetValueFloat64() - ((nzheight - zheight) * cy))
+						right.SetValueFloat64(left.GetValueFloat64() + nzwidth)
+						bottom.SetValueFloat64(top.GetValueFloat64() + nzheight)
+						needsPaint = true
+					}
 				}
 			}
 			if e.Direction == mouse.DirNone && mouseIsDown {
@@ -182,7 +235,6 @@ func Draw(mimg image.Image, bimg *image.RGBA) {
 			my = r2.Dy()
 		}
 		r3 := image.Rect(0, 0, mx, my)
-		fmt.Printf("r: %v, r2: %v, r3: %v\n", r, r2, r3)
 		draw.Draw(bimg, r3, mimg, image.ZP, draw.Src)
 	}
 }
