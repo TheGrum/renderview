@@ -1,7 +1,6 @@
 package mandelbrot
 
 import (
-	"fmt"
 	"math"
 	rv "renderview"
 )
@@ -46,11 +45,30 @@ func innerRender(m *MandelView) {
 func NewMandelView() *rv.BasicRenderModel {
 	m := rv.NewBasicRenderModel()
 	m.InnerRender = getInnerRenderFunc((*MandelView)(m))
-	m.AddParameters(rv.NewFloat64RP("left", -2), rv.NewFloat64RP("top", -1), rv.NewFloat64RP("right", 0.5), rv.NewFloat64RP("bottom", 1), rv.NewIntRP("maxEsc", 100), rv.NewIntRP("width", 100), rv.NewIntRP("height", 100), rv.NewIntRP("red", 230), rv.NewIntRP("green", 235), rv.NewIntRP("blue", 255), rv.NewFloat64RP("mouseX", 0), rv.NewFloat64RP("mouseY", 0), rv.NewIntRP("zoom", 1), rv.NewIntRP("options", rv.OPT_AUTO_ZOOM))
+	m.AddParameters(
+		rv.NewFloat64RP("left", -2),
+		rv.NewFloat64RP("top", -1),
+		rv.NewFloat64RP("right", 0.5),
+		rv.NewFloat64RP("bottom", 1),
+		rv.NewIntRP("maxEsc", 100),
+		rv.NewIntRP("width", 100),
+		rv.NewIntRP("height", 100),
+		rv.NewIntRP("red", 230),
+		rv.NewIntRP("green", 235),
+		rv.NewIntRP("blue", 255),
+		rv.NewFloat64RP("mouseX", 0),
+		rv.NewFloat64RP("mouseY", 0),
+		NewZoomRP("zoom", 1, (*MandelView)(m)),
+		rv.NewIntRP("options", rv.OPT_NONE))
 	go m.GoRender()
 	return m
 }
 
+// Many applications can simply use OPT_AUTO_ZOOM
+// but since the Mandelbrot algorithm we are using ignores the height
+// and produces a square image, we use a custom parameter
+// to calculate the zoom ourselves, also taking the opportunity to
+// dynamically adjust the Escape parameter.
 type ZoomRenderParameter struct {
 	rv.EmptyParameter
 
@@ -63,11 +81,11 @@ func (e *ZoomRenderParameter) GetValueInt() int {
 }
 
 func (e *ZoomRenderParameter) SetValueInt(v int) int {
-	dz := float64(v-e.Value) * 0.1
+	dz := float64(v - e.Value)
 	if dz < 0 {
-		dz = 1 / (1 + math.Abs(dz))
+		dz = 1.1
 	} else if dz > 0 {
-		dz = dz + 1
+		dz = 0.9
 	} else {
 		return v
 	}
@@ -77,31 +95,29 @@ func (e *ZoomRenderParameter) SetValueInt(v int) int {
 	rMin := e.Model.Params[0].GetValueFloat64()
 	iMin := e.Model.Params[1].GetValueFloat64()
 	rMax := e.Model.Params[2].GetValueFloat64()
-	iMax := e.Model.Params[3].GetValueFloat64()
+	//iMax := e.Model.Params[3].GetValueFloat64()
 	width := e.Model.Params[5].GetValueInt()
-	height := e.Model.Params[6].GetValueInt()
-	mouseX := e.Model.Params[11].GetValueFloat64()
-	mouseY := e.Model.Params[12].GetValueFloat64()
+	//height := e.Model.Params[6].GetValueInt()
+	mouseX := e.Model.Params[10].GetValueFloat64()
+	mouseY := e.Model.Params[11].GetValueFloat64()
 
-	dx := math.Abs(rMax - rMin)
-	dy := math.Abs(iMax - iMin)
-	rdx := dx / float64(width)
-	rdy := dy / float64(height)
-	ndx := dx * dz
-	ndy := dy * dz
+	zwidth := rMax - rMin
+	//zheight := iMax - iMin
+	nzwidth := zwidth * dz
+	//nzheight := zheight * dz
 
-	mx := (mouseX * rdx) + rMin
-	my := (mouseY * rdy) + iMin
+	cx := mouseX / float64(width)
+	cy := mouseY / float64(width)
 
-	nleft := rMin - (mx * (ndx - dx))
-	fmt.Printf("%v, %v, %v, %v, %v, %v\n", dz, rMin, mx, ndx, dx, nleft)
-	nright := rMin + ndx
-	ntop := iMin - (my * (ndy - dy))
-	nbottom := iMax + ndy
+	nleft := rMin - ((nzwidth - zwidth) * cx)
+	nright := nleft + nzwidth
+	ntop := iMin - ((nzwidth - zwidth) * cy)
+	nbottom := ntop + nzwidth
 	e.Model.Params[0].SetValueFloat64(nleft)
 	e.Model.Params[1].SetValueFloat64(ntop)
 	e.Model.Params[2].SetValueFloat64(nright)
 	e.Model.Params[3].SetValueFloat64(nbottom)
+	e.Model.Params[4].SetValueInt(100 + int(math.Pow(1.1, float64(v))))
 
 	e.Model.RequestPaint()
 

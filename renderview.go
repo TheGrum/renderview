@@ -1,7 +1,6 @@
 package renderview
 
 import (
-	"fmt"
 	"image"
 	"image/draw"
 	"log"
@@ -44,6 +43,7 @@ func MainLoop(s screen.Screen, r RenderModel) {
 	mouseX := r.GetParameter("mouseX")
 	mouseY := r.GetParameter("mouseY")
 	options := r.GetParameter("options")
+	page := r.GetParameter("page")
 
 	leftIsFloat64 := left.GetType() == "float64"
 	zoomIsFloat64 := zoom.GetType() == "float64"
@@ -67,7 +67,7 @@ func MainLoop(s screen.Screen, r RenderModel) {
 			return
 		}
 		needsPaint = true
-		//		w.Send(paint.Event{})
+		w.Send(paint.Event{})
 	})
 
 	for {
@@ -84,6 +84,14 @@ func MainLoop(s screen.Screen, r RenderModel) {
 		case key.Event:
 			if e.Code == key.CodeEscape {
 				return
+			}
+			if e.Code == key.CodePageUp && e.Direction == key.DirPress {
+				page.SetValueInt(page.GetValueInt() - 1)
+				needsPaint = true
+			}
+			if e.Code == key.CodePageDown && e.Direction == key.DirPress {
+				page.SetValueInt(page.GetValueInt() + 1)
+				needsPaint = true
 			}
 
 		case mouse.Event:
@@ -117,7 +125,7 @@ func MainLoop(s screen.Screen, r RenderModel) {
 							cx = 0.5
 							cy = 0.5
 						}
-						fmt.Printf("zoomOut: mult: %v zwidth: %v nzwidth: %v cx: %v left: %v nleft: %v\n", mult, zwidth, nzwidth, cx, left.GetValueFloat64(), left.GetValueFloat64()-((nzwidth-zwidth)*cx))
+						//fmt.Printf("zoomOut: mult: %v zwidth: %v nzwidth: %v cx: %v left: %v nleft: %v\n", mult, zwidth, nzwidth, cx, left.GetValueFloat64(), left.GetValueFloat64()-((nzwidth-zwidth)*cx))
 						left.SetValueFloat64(left.GetValueFloat64() - ((nzwidth - zwidth) * cx))
 						top.SetValueFloat64(top.GetValueFloat64() - ((nzheight - zheight) * cy))
 						right.SetValueFloat64(left.GetValueFloat64() + nzwidth)
