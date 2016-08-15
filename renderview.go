@@ -1,11 +1,20 @@
 package renderview
 
 import (
+	"fmt"
 	"image"
+	"image/color"
 	"image/draw"
 	"log"
+	"strconv"
+	"strings"
+
+	"golang.org/x/exp/shiny/widget/theme"
 
 	"golang.org/x/exp/shiny/screen"
+	"golang.org/x/exp/shiny/unit"
+	"golang.org/x/exp/shiny/widget"
+	"golang.org/x/exp/shiny/widget/node"
 	"golang.org/x/mobile/event/key"
 	"golang.org/x/mobile/event/lifecycle"
 	"golang.org/x/mobile/event/mouse"
@@ -44,6 +53,8 @@ func MainLoop(s screen.Screen, r RenderModel) {
 	mouseY := r.GetParameter("mouseY")
 	options := r.GetParameter("options")
 	page := r.GetParameter("page")
+	//	offsetX := r.GetParameter("offsetX")
+	//	offsetY := r.GetParameter("offsetY")
 
 	leftIsFloat64 := left.GetType() == "float64"
 	zoomIsFloat64 := zoom.GetType() == "float64"
@@ -249,4 +260,327 @@ func Draw(mimg image.Image, bimg *image.RGBA) {
 
 func handleError(e error) {
 	log.Fatal(e)
+}
+
+func GetWidgetMainLoop(r RenderModel) func(s screen.Screen) {
+	return func(s screen.Screen) {
+		WidgetMainLoop(s, r)
+	}
+}
+
+func expand(n node.Node, expandAlongWeight int) node.Node {
+	return widget.WithLayoutData(n, widget.FlowLayoutData{
+		ExpandAcross:      true,
+		ExpandAlongWeight: expandAlongWeight,
+	})
+}
+
+type RenderWidget struct {
+	node.LeafEmbed
+	index int
+	r     RenderModel
+
+	left,
+	top,
+	right,
+	bottom,
+	width,
+	height,
+	zoom,
+	mouseX,
+	mouseY,
+	options,
+	page RenderParameter
+
+	sx,
+	sy float32
+
+	leftIsFloat64,
+	zoomIsFloat64,
+	mouseIsDown,
+	dragging bool
+}
+
+func NewRenderWidget(r RenderModel) *RenderWidget {
+	w := &RenderWidget{
+		r: r,
+	}
+	w.Wrapper = w
+	w.left = r.GetParameter("left")
+	w.top = r.GetParameter("top")
+	w.right = r.GetParameter("right")
+	w.bottom = r.GetParameter("bottom")
+	w.width = r.GetParameter("width")
+	w.height = r.GetParameter("height")
+	w.zoom = r.GetParameter("zoom")
+	w.mouseX = r.GetParameter("mouseX")
+	w.mouseY = r.GetParameter("mouseY")
+	w.options = r.GetParameter("options")
+	w.page = r.GetParameter("page")
+	w.leftIsFloat64 = w.left.GetType() == "float64"
+	w.zoomIsFloat64 = w.zoom.GetType() == "float64"
+	r.SetRequestPaintFunc(func() {
+		w.Mark(node.MarkNeedsPaintBase)
+	})
+	return w
+}
+
+func (m *RenderWidget) OnInputEvent(e interface{}, origin image.Point) node.EventHandled {
+	switch e := e.(type) {
+	case key.Event:
+		if e.Code == key.CodeEscape {
+			return node.NotHandled
+		}
+		if e.Code == key.CodePageUp && e.Direction == key.DirPress {
+			m.page.SetValueInt(m.page.GetValueInt() - 1)
+			m.Mark(node.MarkNeedsPaintBase)
+		}
+		if e.Code == key.CodePageDown && e.Direction == key.DirPress {
+			m.page.SetValueInt(m.page.GetValueInt() + 1)
+			m.Mark(node.MarkNeedsPaintBase)
+		}
+
+	case mouse.Event:
+		//fmt.Printf("mouse pos(%v)\n", e)
+		m.mouseX.SetValueFloat64(float64(e.X))
+		m.mouseY.SetValueFloat64(float64(e.Y))
+
+		if m.dragging == false && e.Direction == mouse.DirPress && e.Button == mouse.ButtonLeft {
+			//				fmt.Printf("mouse down left(%v)\n", e)
+			m.sx = e.X
+			m.sy = e.Y
+			m.mouseIsDown = true
+		}
+		if e.Button == mouse.ButtonWheelDown {
+			if m.zoomIsFloat64 {
+				m.zoom.SetValueFloat64(m.zoom.GetValueFloat64() - 1)
+			} else {
+				m.zoom.SetValueInt(m.zoom.GetValueInt() - 1)
+			}
+			if m.options.GetValueInt()&OPT_AUTO_ZOOM == OPT_AUTO_ZOOM || m.options.GetValueInt()&OPT_CENTER_ZOOM == OPT_CENTER_ZOOM {
+				mult := 1 + ZOOM_RATE
+				if m.leftIsFloat64 {
+
+					zwidth := m.right.GetValueFloat64() - m.left.GetValueFloat64()
+					zheight := m.bottom.GetValueFloat64() - m.top.GetValueFloat64()
+					nzwidth := zwidth * mult
+					nzheight := zheight * mult
+					cx := float64(e.X) / float64(m.width.GetValueInt())
+					cy := float64(e.Y) / float64(m.height.GetValueInt())
+					if m.options.GetValueInt()&OPT_CENTER_ZOOM == OPT_CENTER_ZOOM {
+						cx = 0.5
+						cy = 0.5
+					}
+					//fmt.Printf("zoomOut: mult: %v zwidth: %v nzwidth: %v cx: %v left: %v nleft: %v\n", mult, zwidth, nzwidth, cx, left.GetValueFloat64(), left.GetValueFloat64()-((nzwidth-zwidth)*cx))
+					m.left.SetValueFloat64(m.left.GetValueFloat64() - ((nzwidth - zwidth) * cx))
+					m.top.SetValueFloat64(m.top.GetValueFloat64() - ((nzheight - zheight) * cy))
+					m.right.SetValueFloat64(m.left.GetValueFloat64() + nzwidth)
+					m.bottom.SetValueFloat64(m.top.GetValueFloat64() + nzheight)
+
+					m.Mark(node.MarkNeedsPaintBase)
+
+				}
+			}
+
+		}
+		if e.Button == mouse.ButtonWheelUp {
+			if m.zoomIsFloat64 {
+				m.zoom.SetValueFloat64(m.zoom.GetValueFloat64() + 1)
+			} else {
+				m.zoom.SetValueInt(m.zoom.GetValueInt() + 1)
+			}
+			if m.options.GetValueInt()&OPT_AUTO_ZOOM == OPT_AUTO_ZOOM || m.options.GetValueInt()&OPT_CENTER_ZOOM == OPT_CENTER_ZOOM {
+				mult := 1 - ZOOM_RATE
+				if m.leftIsFloat64 {
+					zwidth := m.right.GetValueFloat64() - m.left.GetValueFloat64()
+					zheight := m.bottom.GetValueFloat64() - m.top.GetValueFloat64()
+					nzwidth := zwidth * mult
+					nzheight := zheight * mult
+					cx := float64(e.X) / float64(m.width.GetValueInt())
+
+					cy := float64(e.Y) / float64(m.height.GetValueInt())
+					if m.options.GetValueInt()&OPT_CENTER_ZOOM == OPT_CENTER_ZOOM {
+						cx = 0.5
+						cy = 0.5
+					}
+					m.left.SetValueFloat64(m.left.GetValueFloat64() - ((nzwidth - zwidth) * cx))
+					m.top.SetValueFloat64(m.top.GetValueFloat64() - ((nzheight - zheight) * cy))
+					m.right.SetValueFloat64(m.left.GetValueFloat64() + nzwidth)
+					m.bottom.SetValueFloat64(m.top.GetValueFloat64() + nzheight)
+					m.Mark(node.MarkNeedsPaintBase)
+				}
+			}
+		}
+		if e.Direction == mouse.DirNone && m.mouseIsDown {
+			//				fmt.Printf("mouse drag(%v) dragging (%v)\n", e, dragging)
+			if m.dragging == false {
+				//					fmt.Printf("Checking %v, %v, %v, %v\n", e.X, e.Y, sx, sy)
+				if ((e.X - m.sx) > 3) || ((m.sx - e.X) > 3) || ((e.Y - m.sy) > 3) || ((m.sy - e.Y) > 3) {
+					m.dragging = true
+					//						fmt.Printf("Dragging.\n")
+				}
+			} else {
+				if m.leftIsFloat64 {
+					width := m.right.GetValueFloat64() - m.left.GetValueFloat64()
+					height := m.bottom.GetValueFloat64() - m.top.GetValueFloat64()
+					dx := width / float64(m.width.GetValueInt())
+					dy := height / float64(m.height.GetValueInt())
+					cx := float64(e.X-m.sx) * dx
+					cy := float64(e.Y-m.sy) * dy
+					//						fmt.Printf("dx %v dy %v cx %v cy %v\n", dx, dy, cx, cy)
+					m.left.SetValueFloat64(m.left.GetValueFloat64() - cx)
+					m.right.SetValueFloat64(m.right.GetValueFloat64() - cx)
+					m.top.SetValueFloat64(m.top.GetValueFloat64() - cy)
+					m.bottom.SetValueFloat64(m.bottom.GetValueFloat64() - cy)
+				} else {
+					width := m.right.GetValueInt() - m.left.GetValueInt()
+					height := m.bottom.GetValueInt() - m.top.GetValueInt()
+					dx := float64(width) / float64(m.Rect.Dx())
+					dy := float64(height) / float64(m.Rect.Dy())
+					cx := float64(e.X-m.sx) * dx
+					cy := float64(e.Y-m.sy) * dy
+					m.left.SetValueInt(int(float64(m.left.GetValueInt()) - cx))
+					m.right.SetValueInt(int(float64(m.right.GetValueInt()) - cx))
+					m.top.SetValueInt(int(float64(m.top.GetValueInt()) - cy))
+					m.bottom.SetValueInt(int(float64(m.bottom.GetValueInt()) - cy))
+				}
+				m.Mark(node.MarkNeedsPaintBase)
+				//			Draw(r.Render(), buf.RGBA())
+
+				m.sx = e.X
+				m.sy = e.Y
+
+			}
+		}
+		if e.Direction == mouse.DirRelease {
+			m.dragging = false
+			m.mouseIsDown = false
+		}
+
+	}
+	return node.NotHandled
+}
+
+func (m *RenderWidget) PaintBase(ctx *node.PaintBaseContext, origin image.Point) error {
+	m.width.SetValueInt(m.Rect.Dx())
+	m.height.SetValueInt(m.Rect.Dy())
+	m.Marks.UnmarkNeedsPaintBase()
+	Draw(m.r.Render(), ctx.Dst)
+	return nil
+}
+
+func WidgetMainLoop(s screen.Screen, r RenderModel) {
+	w := GetRenderWidgetWithSidebar(r)
+	if err := widget.RunWindow(s, w, nil); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func GetParameterValueAsString(p RenderParameter) string {
+	switch p.GetType() {
+	case "int":
+		return fmt.Sprintf("%v", p.GetValueInt())
+	case "uint32":
+		return fmt.Sprintf("%v", p.GetValueUInt32())
+	case "float64":
+		return fmt.Sprintf("%v", p.GetValueFloat64())
+	case "complex128":
+		return fmt.Sprintf("%v", p.GetValueComplex128())
+	case "string":
+		return p.GetValueString()
+	default:
+		return p.GetValueString()
+	}
+}
+
+func ParseComplex(v string) (complex128, error) {
+	v = strings.Replace(v, ",", "+", -1)
+	l := strings.Split(v, "+")
+	r, err := strconv.ParseFloat(l[0], 64)
+	if err != nil {
+		return 0, err
+	}
+	if len(l) > 1 {
+		l[1] = strings.Replace(l[1], "i", "", -1)
+		i, err := strconv.ParseFloat(l[1], 64)
+		if err != nil {
+			return 0, err
+		}
+		return complex(r, i), nil
+	} else {
+		return complex(r, 0), nil
+	}
+
+}
+func SetParameterValueFromString(p RenderParameter, v string) {
+	switch p.GetType() {
+	case "int":
+		i, err := strconv.Atoi(v)
+		if err == nil {
+			p.SetValueInt(i)
+		}
+	case "uint32":
+		i, err := strconv.ParseInt(v, 10, 32)
+		if err == nil {
+			p.SetValueUInt32(uint32(i))
+		}
+	case "float64":
+		f, err := strconv.ParseFloat(v, 64)
+		if err == nil {
+			p.SetValueFloat64(f)
+		}
+	case "complex128":
+		c, err := ParseComplex(v)
+		if err == nil {
+			p.SetValueComplex128(c)
+		}
+	case "string":
+		p.SetValueString(v)
+	default:
+		p.SetValueString(v)
+
+	}
+}
+
+func GetRenderWidgetWithSidebar(r RenderModel) node.Node {
+	sideflow := widget.NewFlow(widget.AxisVertical)
+	names := r.GetParameterNames()
+
+	for i := 0; i < len(names); i++ {
+		sideflow.Insert(widget.NewLabel(names[i]), nil)
+		w := widget.NewSizer(unit.Chs(15), unit.Ems(1.1),
+			widget.NewLabel(r.GetParameter(names[i]).GetValueString()))
+
+		sideflow.Insert(w, nil)
+	}
+	sidebar :=
+		widget.NewUniform(theme.StaticColor(color.RGBA{0xff, 0xff, 0xff, 0xff}), sideflow)
+
+	//	sidebar := widget.NewUniform(theme.Neutral,
+	//		widget.NewPadder(widget.AxisBoth, unit.Ems(0.5),
+	//			sideflow,
+	//		),
+	//	)
+	divider := widget.NewSizer(unit.Value{}, unit.DIPs(2),
+		widget.NewUniform(theme.StaticColor(color.RGBA{0xbf, 0xbf, 0xb0, 0xff}), nil))
+
+	body := widget.NewUniform(theme.StaticColor(color.RGBA{0xbf, 0xbf, 0xb0, 0xff}), NewRenderWidget(r))
+
+	w := widget.NewFlow(widget.AxisHorizontal,
+		expand(widget.NewSheet(sidebar), 0),
+		expand(widget.NewSheet(divider), 0),
+		expand(widget.NewSheet(body), 1),
+	)
+
+	return w
+}
+
+type ParamEdits struct {
+	P []ParamEdit
+}
+
+type ParamEdit struct {
+	R RenderModel
+	P RenderParameter
+	N node.Node
 }

@@ -9,6 +9,7 @@ type RenderModel interface {
 	Lock()
 	Unlock()
 
+	GetParameterNames() []string
 	GetParameter(name string) RenderParameter
 	Render() image.Image
 	SetRequestPaintFunc(func())
@@ -19,6 +20,14 @@ type EmptyRenderModel struct {
 
 	Params       []RenderParameter
 	RequestPaint func()
+}
+
+func (e *EmptyRenderModel) GetParameterNames() []string {
+	s := make([]string, len(e.Params))
+	for i := 0; i < len(e.Params); i++ {
+		s[i] = e.Params[i].GetName()
+	}
+	return s
 }
 
 func (e *EmptyRenderModel) GetParameter(name string) RenderParameter {

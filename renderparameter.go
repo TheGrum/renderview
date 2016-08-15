@@ -1,5 +1,10 @@
 package renderview
 
+import (
+	"fmt"
+	"strconv"
+)
+
 type RenderParameter interface {
 	GetName() string
 	GetType() string
@@ -75,6 +80,20 @@ func (e *UInt32RenderParameter) GetValueUInt32() uint32 {
 func (e *UInt32RenderParameter) SetValueUInt32(v uint32) uint32 {
 	e.Value = v
 	return e.Value
+}
+
+func (e *UInt32RenderParameter) GetValueString() string {
+	return fmt.Sprintf("%v", e.Value)
+}
+
+func (e *UInt32RenderParameter) SetValueString(v string) string {
+	r, err := strconv.ParseInt(v, 10, 32)
+	if err != nil {
+		e.SetValueUInt32(uint32(r))
+	} else {
+		e.SetValueUInt32(0)
+	}
+	return e.GetValueString()
 }
 
 type IntRenderParameter struct {
