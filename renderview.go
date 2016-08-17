@@ -548,9 +548,13 @@ func GetRenderWidgetWithSidebar(r RenderModel) node.Node {
 
 	for i := 0; i < len(names); i++ {
 		sideflow.Insert(widget.NewLabel(names[i]), nil)
-		w := widget.NewSizer(unit.Chs(15), unit.Ems(1.1),
-			widget.NewLabel(r.GetParameter(names[i]).GetValueString()))
+		e := widget.NewLabel("test")
+		//e := editor.NewEditor(inconsolata.Regular8x16, nil)
 
+		e.Text = r.GetParameter(names[i]).GetValueString()
+		//e.Text = "Test"
+		w := widget.NewUniform(theme.StaticColor(color.RGBA{0xba, 0xba, 0xba, 0xff}), widget.NewSizer(unit.Chs(15), unit.Ems(1.1), e))
+		//			widget.NewLabel(r.GetParameter(names[i]).GetValueString()))
 		sideflow.Insert(w, nil)
 	}
 	sidebar :=
