@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"golang.org/x/exp/shiny/widget/theme"
+	"golang.org/x/image/font/inconsolata"
 
 	"golang.org/x/exp/shiny/screen"
 	"golang.org/x/exp/shiny/unit"
@@ -548,17 +549,19 @@ func GetRenderWidgetWithSidebar(r RenderModel) node.Node {
 
 	for i := 0; i < len(names); i++ {
 		sideflow.Insert(widget.NewLabel(names[i]), nil)
-		e := widget.NewLabel("test")
+		//e := widget.NewLabel("test")
 		//e := editor.NewEditor(inconsolata.Regular8x16, nil)
-
-		e.Text = r.GetParameter(names[i]).GetValueString()
-		//e.Text = "Test"
-		w := widget.NewUniform(theme.StaticColor(color.RGBA{0xba, 0xba, 0xba, 0xff}), widget.NewSizer(unit.Chs(15), unit.Ems(1.1), e))
+		//e := NewTextEdit(r.GetParameter(names[i]).GetValueString(), inconsolata.Regular8x16, nil)
+		e := NewTextEdit("text", inconsolata.Regular8x16, nil)
+		//		e.Text = r.GetParameter(names[i]).GetValueString()
+		e.Text = "Test"
+		e.Rect = image.Rectangle{image.ZP, image.Point{50, 16}}
+		//		w := expand(e, 0
+		w := widget.NewSizer(unit.Pixels(50), unit.Pixels(30), e)
 		//			widget.NewLabel(r.GetParameter(names[i]).GetValueString()))
 		sideflow.Insert(w, nil)
 	}
-	sidebar :=
-		widget.NewUniform(theme.StaticColor(color.RGBA{0xff, 0xff, 0xff, 0xff}), sideflow)
+	sidebar := widget.NewUniform(theme.StaticColor(color.RGBA{0xff, 0xff, 0xff, 0xff}), sideflow)
 
 	//	sidebar := widget.NewUniform(theme.Neutral,
 	//		widget.NewPadder(widget.AxisBoth, unit.Ems(0.5),
