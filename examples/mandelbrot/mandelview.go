@@ -5,15 +5,15 @@ import (
 	rv "renderview"
 )
 
-type MandelView rv.BasicRenderModel
+type MandelModel rv.BasicRenderModel
 
-func getInnerRenderFunc(m *MandelView) func() {
+func getInnerRenderFunc(m *MandelModel) func() {
 	return func() {
 		innerRender(m)
 	}
 }
 
-func innerRender(m *MandelView) {
+func innerRender(m *MandelModel) {
 	var rMin, iMin, rMax, iMax float64
 	var width, red, green, blue int
 	var maxEsc int
@@ -42,9 +42,9 @@ func innerRender(m *MandelView) {
 	}
 }
 
-func NewMandelView() *rv.BasicRenderModel {
+func NewMandelModel() *rv.BasicRenderModel {
 	m := rv.NewBasicRenderModel()
-	m.InnerRender = getInnerRenderFunc((*MandelView)(m))
+	m.InnerRender = getInnerRenderFunc((*MandelModel)(m))
 	m.AddParameters(
 		rv.NewFloat64RP("left", -2),
 		rv.NewFloat64RP("top", -1),
@@ -58,7 +58,7 @@ func NewMandelView() *rv.BasicRenderModel {
 		rv.NewIntRP("blue", 255),
 		rv.NewFloat64RP("mouseX", 0),
 		rv.NewFloat64RP("mouseY", 0),
-		NewZoomRP("zoom", 1, (*MandelView)(m)),
+		NewZoomRP("zoom", 1, (*MandelModel)(m)),
 		rv.NewIntRP("options", rv.OPT_NONE))
 	go m.GoRender()
 	return m
@@ -73,7 +73,7 @@ type ZoomRenderParameter struct {
 	rv.EmptyParameter
 
 	Value int
-	Model *MandelView
+	Model *MandelModel
 }
 
 func (e *ZoomRenderParameter) GetValueInt() int {
@@ -124,7 +124,7 @@ func (e *ZoomRenderParameter) SetValueInt(v int) int {
 	return e.Value
 }
 
-func NewZoomRP(name string, value int, m *MandelView) *ZoomRenderParameter {
+func NewZoomRP(name string, value int, m *MandelModel) *ZoomRenderParameter {
 	return &ZoomRenderParameter{
 		EmptyParameter: rv.EmptyParameter{
 			Name: name,

@@ -9,7 +9,7 @@ import (
 	rv "renderview"
 	"time"
 
-	"golang.org/x/exp/shiny/driver"
+	"renderview/driver/shiny"
 )
 
 func main() {
@@ -59,7 +59,7 @@ func main() {
 			m.RequestPaint()
 		}
 	}(m)
-	driver.Main(rv.GetMainLoop(m))
+	shiny.FrameBuffer(m)
 }
 
 func handleError(err error) {

@@ -2,12 +2,23 @@ package renderview
 
 import (
 	"fmt"
+	"strings"
 	"strconv"
+)
+
+const (
+    HINT_NONE = 1 << iota
+    HINT_HIDE = 1 << iota
+    HINT_SIDEBAR = 1 << iota   
+    HINT_FOOTER = 1 << iota   
+    HINT_FULLTEXT = 1 << iota   
 )
 
 type RenderParameter interface {
 	GetName() string
 	GetType() string
+	GetHint() int
+	SetHint(int) 
 	GetValueInt() int
 	GetValueUInt32() uint32
 	GetValueFloat64() float64
@@ -23,6 +34,7 @@ type RenderParameter interface {
 type EmptyParameter struct {
 	Name string
 	Type string
+	Hint int
 }
 
 func (e *EmptyParameter) GetName() string {
@@ -31,6 +43,10 @@ func (e *EmptyParameter) GetName() string {
 
 func (e *EmptyParameter) GetType() string {
 	return e.Type
+}
+
+func (e *EmptyParameter) GetHint() int {
+	return e.Hint
 }
 
 func (e *EmptyParameter) GetValueInt() int {
@@ -51,6 +67,9 @@ func (e *EmptyParameter) GetValueComplex128() complex128 {
 	return 0
 }
 
+func (e *EmptyParameter) SetHint(value int) {
+	e.Hint = value
+}
 func (e *EmptyParameter) SetValueInt(value int) int {
 	return 0
 }
@@ -205,3 +224,89 @@ func NewStringRP(name string, value string) *StringRenderParameter {
 		Value: value,
 	}
 }
+
+// Utility functions
+
+
+// GetParameterValueAsString replaces the need to implement GetValueString on
+// each parameter. Custom parameters should override GetValueString to override 
+// this behavior.
+func GetParameterValueAsString(p RenderParameter) string {
+	switch p.GetType() {
+	case "int":
+		return fmt.Sprintf("%v", p.GetValueInt())
+	case "uint32":
+		return fmt.Sprintf("%v", p.GetValueUInt32())
+	case "float64":
+		return fmt.Sprintf("%v", p.GetValueFloat64())
+	case "complex128":
+		return fmt.Sprintf("%v", p.GetValueComplex128())
+	case "string":
+		return p.GetValueString()
+	default:
+		return p.GetValueString()
+	}
+}
+
+func ParseComplex(v string) (complex128, error) {
+	v = strings.Replace(v, ",", "+", -1)
+	l := strings.Split(v, "+")
+	r, err := strconv.ParseFloat(l[0], 64)
+	if err != nil {
+		return 0, err
+	}
+	if len(l) > 1 {
+		l[1] = strings.Replace(l[1], "i", "", -1)
+		i, err := strconv.ParseFloat(l[1], 64)
+		if err != nil {
+			return 0, err
+		}
+		return complex(r, i), nil
+	} else {
+		return complex(r, 0), nil
+	}
+
+}
+
+// SetParameterValueAsString replaces the need to implement SetValueString on
+// each parameter. Custom parameters should override SetValueString to override 
+// this behavior.
+func SetParameterValueFromString(p RenderParameter, v string) {
+	switch p.GetType() {
+	case "int":
+		i, err := strconv.Atoi(v)
+		if err == nil {
+			p.SetValueInt(i)
+		}
+	case "uint32":
+		i, err := strconv.ParseInt(v, 10, 32)
+		if err == nil {
+			p.SetValueUInt32(uint32(i))
+		}
+	case "float64":
+		f, err := strconv.ParseFloat(v, 64)
+		if err == nil {
+			p.SetValueFloat64(f)
+		}
+	case "complex128":
+		c, err := ParseComplex(v)
+		if err == nil {
+			p.SetValueComplex128(c)
+		}
+	case "string":
+		p.SetValueString(v)
+	default:
+		p.SetValueString(v)
+
+	}
+}
+
+func SetHints(hint int, params ...RenderParameter) []RenderParameter {
+    for _, p := range params {
+        p.SetHint(hint)
+    }
+    
+    return params
+}
+
+

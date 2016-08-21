@@ -10,9 +10,12 @@ type RenderModel interface {
 	Unlock()
 
 	GetParameterNames() []string
+	GetHintedParameterNames(hint int) []string
+	GetHintedParameterNamesWithFallback(hint int) []string
 	GetParameter(name string) RenderParameter
 	Render() image.Image
 	SetRequestPaintFunc(func())
+	GetRequestPaintFunc() func()
 }
 
 type EmptyRenderModel struct {
@@ -30,6 +33,37 @@ func (e *EmptyRenderModel) GetParameterNames() []string {
 	return s
 }
 
+// GetHintedParameterNames returns a list of parameters with one of the passed hints
+func (e *EmptyRenderModel) GetHintedParameterNames(hints int) []string {
+	s := make([]string, 0, len(e.Params))
+	for i := 0; i < len(e.Params); i++ {
+	    if e.Params[i].GetHint()&hints > 0 {
+		    s = append(s, e.Params[i].GetName())
+		}
+	}
+	return s
+}
+
+// GetHintedParameterNamesWithFallback retrieves the names of parameters matching hints,
+// if that is the empty set, it retrieves the names of parameters with no hints
+func (e *EmptyRenderModel) GetHintedParameterNamesWithFallback(hints int) []string {
+	s := make([]string, 0, len(e.Params))
+	for i := 0; i < len(e.Params); i++ {
+	    if e.Params[i].GetHint()&hints > 0 {
+		    s = append(s, e.Params[i].GetName())
+		}
+	}
+	if len(s) == 0 {
+	    for i := 0; i < len(e.Params); i++ {
+	        if e.Params[i].GetHint() == 0 {
+		        s = append(s, e.Params[i].GetName())
+		    }
+	    }
+	}
+	return s
+}
+
+
 func (e *EmptyRenderModel) GetParameter(name string) RenderParameter {
 	for _, p := range e.Params {
 		if name == p.GetName() {
@@ -46,6 +80,10 @@ func (e *EmptyRenderModel) Render() image.Image {
 
 func (e *EmptyRenderModel) AddParameters(Params ...RenderParameter) {
 	e.Params = append(e.Params, Params...)
+}
+
+func (e *EmptyRenderModel) GetRequestPaintFunc() func() {
+    return e.RequestPaint 
 }
 
 func (e *EmptyRenderModel) SetRequestPaintFunc(f func()) {

@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	m := mandelbrot.NewMandelView()
+	m := mandelbrot.NewMandelModel()
 	renderview.GtkWindowWithWidgetsInit(m)
 	//	driver.Main(renderview.GetMainLoop(m))
 

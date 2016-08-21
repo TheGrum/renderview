@@ -1,0 +1,12 @@
+// +build linux,!android
+
+package driver
+
+import (
+    "renderview/driver/gtk2"
+    rv "renderview"
+)
+
+func main(m rv.RenderModel) {
+    gtk2.Main(m)
+}
