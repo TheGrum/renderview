@@ -772,7 +772,6 @@ func (w *GtkRenderWidget) Configure() {
 
 func (w *GtkRenderWidget) Draw(ctx *glib.CallbackContext) {
 	if w.needsPaint || w.Image == nil {
-		fmt.Printf("Requesting render. %v %v %v %v\n", w.left.GetValueFloat64(), w.top.GetValueFloat64(), w.right.GetValueFloat64(), w.bottom.GetValueFloat64())
 		if w.needsUpdate {
 			w.UpdateParamWidgets()
 		}
@@ -784,7 +783,6 @@ func (w *GtkRenderWidget) Draw(ctx *glib.CallbackContext) {
 		case *image.RGBA:
 			w.Image = a
 			w.needsPaint = false
-			fmt.Println("Got image")
 		default:
 			//todo: copy to an RGBA here
 			fmt.Printf("Missing type handler for (%t)\n", a)
@@ -792,7 +790,8 @@ func (w *GtkRenderWidget) Draw(ctx *glib.CallbackContext) {
 		}
 	}
 	// copy from Go image to GDK image
-	GdkBitBlt(w.Image, w.pixbuf, image.ZR, image.ZP)
+	w.pixbuf.Fill(0)
+	GdkPixelCopy(w.Image, w.pixbuf, image.ZR, image.ZP)
 
 	// Draw GDK image on window
 	win := w.GetWindow()
@@ -801,7 +800,7 @@ func (w *GtkRenderWidget) Draw(ctx *glib.CallbackContext) {
 	draw.DrawPixbuf(gc, w.pixbuf, 0, 0, 0, 0, w.pixbuf.GetWidth(), w.pixbuf.GetHeight(), gdk.RGB_DITHER_NONE, 0, 0)
 }
 
-func GdkBitBlt(source *image.RGBA, target *gdkpixbuf.Pixbuf, region image.Rectangle, targetOffset image.Point) {
+func GdkPixelCopy(source *image.RGBA, target *gdkpixbuf.Pixbuf, region image.Rectangle, targetOffset image.Point) {
 	if source == nil {
 		return
 	}
@@ -837,9 +836,6 @@ func GdkBitBlt(source *image.RGBA, target *gdkpixbuf.Pixbuf, region image.Rectan
 func (w *GtkRenderWidget) OnScroll(e *gdk.EventScroll) {
 	// the case of SCROLL_Down is incorrect in gdk.go
 	// todo: fix this when it is fixed upstream
-	fmt.Printf("Scroll called with %v\n", e)
-	fmt.Printf("ModifierType: %v", gdk.ModifierType(e.State))
-	fmt.Printf("ScrollDirection: %v", gdk.ScrollDirection(e.Direction))
 	// e.Direction always has same value, and does not match documentation
 	if gdk.ModifierType(e.State) > (1 << 30) {
 		if w.zoomIsFloat64 {
@@ -951,8 +947,6 @@ func (w *GtkRenderWidget) OnButton(e *gdk.EventButton) {
 	w.mouseX.SetValueFloat64(float64(e.X))
 	w.mouseY.SetValueFloat64(float64(e.Y))
 
-	fmt.Printf("%v,%v,%v,%v\n", gdk.EventType(e.Type), gdk.BUTTON_PRESS, (gdk.EventType(e.Type)&gdk.BUTTON_PRESS) > 0, e.Button)
-
 	if gdk.EventType(e.Type) == gdk.BUTTON_PRESS {
 		if w.dragging == false && w.mouseIsDown == false && e.Button == 1 {
 			//			fmt.Println("Mousedown")
@@ -1002,8 +996,6 @@ func NewGtkParamWidget(p RenderParameter) *GtkParamWidget {
 		if s != pValue {
 			SetParameterValueFromString(r.P, s)
 		}
-		//		start.Free()
-		//		end.Free()
 	})
 	return r
 }
