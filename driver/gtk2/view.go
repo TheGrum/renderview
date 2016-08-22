@@ -5,24 +5,23 @@ import (
 	"image"
 	"unsafe"
 
-    rv "renderview"
-	
-    "github.com/mattn/go-gtk/gdk"
+	rv "renderview"
+
+	"github.com/mattn/go-gtk/gdk"
 	"github.com/mattn/go-gtk/gdkpixbuf"
 	"github.com/mattn/go-gtk/glib"
 	"github.com/mattn/go-gtk/gtk"
 )
 
-
 // FrameBuffer sets up a GTK2 Window and runs a mainloop rendering the RenderModel
 func FrameBuffer(m rv.RenderModel) {
-    GtkWindowInit(m)
+	GtkWindowInit(m)
 }
 
-// Main sets up a GTK2 Window with widgets for editing parameters and runs a 
+// Main sets up a GTK2 Window with widgets for editing parameters and runs a
 // mainloop rendering the RenderModel
 func Main(m rv.RenderModel) {
-    GtkWindowWithWidgetsInit(m)
+	GtkWindowWithWidgetsInit(m)
 }
 
 func GtkWindowInit(r rv.RenderModel) {
@@ -66,23 +65,25 @@ func GetGtkWindow(r rv.RenderModel, addWidgets bool) *gtk.Window {
 func WrapRenderWidget(r *GtkRenderWidget) gtk.IWidget {
 	parent := gtk.NewHBox(false, 1)
 	sidebar := gtk.NewVBox(false, 1)
-	names := r.R.GetHintedParameterNamesWithFallback(rv.HINT_SIDEBAR|rv.HINT_FOOTER)
-	sidebar.PackStart(gtk.NewLabel("________Parameters________"), false, false, 1)
+	names := r.R.GetHintedParameterNamesWithFallback(rv.HINT_SIDEBAR | rv.HINT_FOOTER)
+	if len(names) > 0 {
+		sidebar.PackStart(gtk.NewLabel("________Parameters________"), false, false, 1)
 
-	for i := 0; i < len(names); i++ {
-		sidebar.PackStart(gtk.NewLabel(names[i]), false, false, 1)
-		tv := NewGtkParamWidget(r.R.GetParameter(names[i]), r)
-		r.ParamWidgets = append(r.ParamWidgets, tv)
-		sidebar.PackStart(tv, false, false, 1)
+		for i := 0; i < len(names); i++ {
+			sidebar.PackStart(gtk.NewLabel(names[i]), false, false, 1)
+			tv := NewGtkParamWidget(r.R.GetParameter(names[i]), r)
+			r.ParamWidgets = append(r.ParamWidgets, tv)
+			sidebar.PackStart(tv, false, false, 1)
+		}
+
+		parent.PackStart(sidebar, false, true, 1)
 	}
-
-	parent.PackStart(sidebar, false, true, 1)
 	names = r.R.GetHintedParameterNames(rv.HINT_FULLTEXT)
 	if len(names) > 0 {
-	    // we can only do this for one parameter, so ignore multiples
-	    tv := NewGtkParamWidget(r.R.GetParameter(names[0]), r)
-	    r.ParamWidgets = append(r.ParamWidgets, tv)
-	    parent.PackStart(tv, true, true, 1)
+		// we can only do this for one parameter, so ignore multiples
+		tv := NewGtkParamWidget(r.R.GetParameter(names[0]), r)
+		r.ParamWidgets = append(r.ParamWidgets, tv)
+		parent.PackStart(tv, true, true, 1)
 	}
 	parent.PackEnd(r, true, true, 1)
 	return parent
@@ -202,6 +203,7 @@ func (w *GtkRenderWidget) Configure() {
 
 	w.pixbuf = gdkpixbuf.NewPixbuf(gdkpixbuf.GDK_COLORSPACE_RGB, true, 8, allocation.Width, allocation.Height)
 	w.needsPaint = true
+	w.needsUpdate = true
 }
 
 func (w *GtkRenderWidget) Draw(ctx *glib.CallbackContext) {
@@ -326,6 +328,7 @@ func (w *GtkRenderWidget) OnScroll(e *gdk.EventScroll) {
 			}
 		}
 	}
+	w.needsUpdate = true
 	w.SetNeedsPaint()
 
 }
@@ -367,6 +370,7 @@ func (w *GtkRenderWidget) OnMotion(e *gdk.EventMotion) {
 			w.bottom.SetValueInt(int(float64(w.bottom.GetValueInt()) - cy))
 		}
 		//			Draw(r.Render(), buf.RGBA())
+		w.needsUpdate = true
 		w.SetNeedsPaint()
 
 		w.sx = e.X
@@ -430,7 +434,7 @@ func NewGtkParamWidget(p rv.RenderParameter, w *GtkRenderWidget) *GtkParamWidget
 		if s != pValue {
 			rv.SetParameterValueFromString(r.P, s)
 		}
-    w.SetNeedsPaint()
+		w.SetNeedsPaint()
 	})
 	return r
 }
