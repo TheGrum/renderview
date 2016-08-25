@@ -93,7 +93,7 @@ type GtkRenderWidget struct {
 	*gtk.DrawingArea
 
 	pixbuf *gdkpixbuf.Pixbuf
-	Image  *image.RGBA
+	Image  image.Image
 
 	index int
 	R     rv.RenderModel
@@ -173,14 +173,15 @@ func NewGtkRenderWidget(r rv.RenderModel) *GtkRenderWidget {
 		w.needsUpdate = true
 		w.GetWindow().Invalidate(nil, false)
 	})
+	w.SetCanFocus(true)
+	//	w.SetFocusOnClick(true) // missing?
 	w.SetEvents(int(gdk.POINTER_MOTION_MASK | gdk.BUTTON_PRESS_MASK | gdk.BUTTON_RELEASE_MASK | gdk.EXPOSURE_MASK | gdk.SCROLL_MASK | gdk.KEY_PRESS_MASK))
 	return w
 }
 
 func (w *GtkRenderWidget) SetNeedsPaint() {
 	w.needsPaint = true
-	allocation := w.GetAllocation()
-	w.GetWindow().Invalidate((*gdk.Rectangle)(allocation), false)
+	w.QueueDraw()
 }
 
 func (w *GtkRenderWidget) UpdateParamWidgets() {
@@ -207,10 +208,10 @@ func (w *GtkRenderWidget) Configure() {
 }
 
 func (w *GtkRenderWidget) Draw(ctx *glib.CallbackContext) {
+	if w.needsUpdate {
+		w.UpdateParamWidgets()
+	}
 	if w.needsPaint || w.Image == nil {
-		if w.needsUpdate {
-			w.UpdateParamWidgets()
-		}
 		img := w.R.Render()
 		if img == nil {
 			return
@@ -219,15 +220,23 @@ func (w *GtkRenderWidget) Draw(ctx *glib.CallbackContext) {
 		case *image.RGBA:
 			w.Image = a
 			w.needsPaint = false
+		case *image.NRGBA:
+			w.Image = a
+			w.needsPaint = false
 		default:
 			//todo: copy to an RGBA here
-			fmt.Printf("Missing type handler for (%t)\n", a)
+			fmt.Printf("Missing type handler\n", a)
 			return
 		}
 	}
 	// copy from Go image to GDK image
 	w.pixbuf.Fill(0)
-	GdkPixelCopy(w.Image, w.pixbuf, image.ZR, image.ZP)
+	switch a := w.Image.(type) {
+	case *image.RGBA:
+		GdkPixelCopy(a, w.pixbuf, image.ZR, image.ZP)
+	case *image.NRGBA:
+		GdkPixelCopyNRGBA(a, w.pixbuf, image.ZR, image.ZP)
+	}
 
 	// Draw GDK image on window
 	win := w.GetWindow()
@@ -237,6 +246,39 @@ func (w *GtkRenderWidget) Draw(ctx *glib.CallbackContext) {
 }
 
 func GdkPixelCopy(source *image.RGBA, target *gdkpixbuf.Pixbuf, region image.Rectangle, targetOffset image.Point) {
+	if source == nil {
+		return
+	}
+	if target == nil {
+		return
+	}
+	sourceBounds := source.Rect
+	targetBounds := image.Rect(0, 0, target.GetWidth(), target.GetHeight())
+	sourceRowstride := source.Stride
+	targetRowstride := target.GetRowstride()
+	//Pix[(y-Rect.Min.Y)*Stride + (x-Rect.Min.X)*4]
+	var targetPix []byte
+	var sourcePix []uint8
+	targetPix = target.GetPixelsWithLength()
+	sourcePix = source.Pix
+
+	if region.Dx() == 0 {
+		region = sourceBounds.Intersect(targetBounds.Sub(targetOffset))
+	}
+	region = region.Intersect(sourceBounds).Intersect(targetBounds.Sub(targetOffset))
+	var x, y int
+
+	for y = region.Min.Y; y < region.Max.Y; y++ {
+		for x = region.Min.X; x < region.Max.X; x++ {
+			targetPix[(y+targetOffset.Y)*targetRowstride+(x+targetOffset.X)*4] = sourcePix[y*sourceRowstride+x*4]
+			targetPix[(y+targetOffset.Y)*targetRowstride+(x+targetOffset.X)*4+1] = sourcePix[y*sourceRowstride+x*4+1]
+			targetPix[(y+targetOffset.Y)*targetRowstride+(x+targetOffset.X)*4+2] = sourcePix[y*sourceRowstride+x*4+2]
+			targetPix[(y+targetOffset.Y)*targetRowstride+(x+targetOffset.X)*4+3] = sourcePix[y*sourceRowstride+x*4+3]
+		}
+	}
+}
+
+func GdkPixelCopyNRGBA(source *image.NRGBA, target *gdkpixbuf.Pixbuf, region image.Rectangle, targetOffset image.Point) {
 	if source == nil {
 		return
 	}
@@ -384,6 +426,7 @@ func (w *GtkRenderWidget) OnButton(e *gdk.EventButton) {
 	//	fmt.Printf("Button called with %v\n", e)
 	w.mouseX.SetValueFloat64(float64(e.X))
 	w.mouseY.SetValueFloat64(float64(e.Y))
+	w.GrabFocus()
 
 	if gdk.EventType(e.Type) == gdk.BUTTON_PRESS {
 		if w.dragging == false && w.mouseIsDown == false && e.Button == 1 {
@@ -403,11 +446,13 @@ func (w *GtkRenderWidget) OnButton(e *gdk.EventButton) {
 func (w *GtkRenderWidget) OnKeyPress(e *gdk.EventKey) {
 	if e.Keyval == gdk.KEY_Page_Up {
 		w.page.SetValueInt(w.page.GetValueInt() - 1)
-		w.needsPaint = true
+		w.needsUpdate = true
+		w.SetNeedsPaint()
 	}
 	if e.Keyval == gdk.KEY_Page_Down {
 		w.page.SetValueInt(w.page.GetValueInt() + 1)
-		w.needsPaint = true
+		w.needsUpdate = true
+		w.SetNeedsPaint()
 	}
 }
 

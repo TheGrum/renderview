@@ -1,24 +1,25 @@
 package renderview
 
 import (
+	"bytes"
 	"fmt"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 const (
-    HINT_NONE = 1 << iota
-    HINT_HIDE = 1 << iota
-    HINT_SIDEBAR = 1 << iota   
-    HINT_FOOTER = 1 << iota   
-    HINT_FULLTEXT = 1 << iota   
+	HINT_NONE     = 1 << iota
+	HINT_HIDE     = 1 << iota
+	HINT_SIDEBAR  = 1 << iota
+	HINT_FOOTER   = 1 << iota
+	HINT_FULLTEXT = 1 << iota
 )
 
 type RenderParameter interface {
 	GetName() string
 	GetType() string
 	GetHint() int
-	SetHint(int) 
+	SetHint(int)
 	GetValueInt() int
 	GetValueUInt32() uint32
 	GetValueFloat64() float64
@@ -227,9 +228,8 @@ func NewStringRP(name string, value string) *StringRenderParameter {
 
 // Utility functions
 
-
 // GetParameterValueAsString replaces the need to implement GetValueString on
-// each parameter. Custom parameters should override GetValueString to override 
+// each parameter. Custom parameters should override GetValueString to override
 // this behavior.
 func GetParameterValueAsString(p RenderParameter) string {
 	switch p.GetType() {
@@ -269,7 +269,7 @@ func ParseComplex(v string) (complex128, error) {
 }
 
 // SetParameterValueAsString replaces the need to implement SetValueString on
-// each parameter. Custom parameters should override SetValueString to override 
+// each parameter. Custom parameters should override SetValueString to override
 // this behavior.
 func SetParameterValueFromString(p RenderParameter, v string) {
 	switch p.GetType() {
@@ -302,11 +302,21 @@ func SetParameterValueFromString(p RenderParameter, v string) {
 }
 
 func SetHints(hint int, params ...RenderParameter) []RenderParameter {
-    for _, p := range params {
-        p.SetHint(hint)
-    }
-    
-    return params
+	for _, p := range params {
+		p.SetHint(hint)
+	}
+
+	return params
 }
 
-
+func GetParameterStatusString(params ...RenderParameter) string {
+	buffer := bytes.NewBuffer(make([]byte, 0, len(params)*15))
+	for i, p := range params {
+		is := strconv.Itoa(i)
+		buffer.WriteString(is)
+		buffer.WriteString(":")
+		buffer.WriteString(GetParameterValueAsString(p))
+		buffer.WriteString(",")
+	}
+	return buffer.String()
+}

@@ -37,8 +37,8 @@ func (e *EmptyRenderModel) GetParameterNames() []string {
 func (e *EmptyRenderModel) GetHintedParameterNames(hints int) []string {
 	s := make([]string, 0, len(e.Params))
 	for i := 0; i < len(e.Params); i++ {
-	    if e.Params[i].GetHint()&hints > 0 {
-		    s = append(s, e.Params[i].GetName())
+		if e.Params[i].GetHint()&hints > 0 {
+			s = append(s, e.Params[i].GetName())
 		}
 	}
 	return s
@@ -49,20 +49,19 @@ func (e *EmptyRenderModel) GetHintedParameterNames(hints int) []string {
 func (e *EmptyRenderModel) GetHintedParameterNamesWithFallback(hints int) []string {
 	s := make([]string, 0, len(e.Params))
 	for i := 0; i < len(e.Params); i++ {
-	    if e.Params[i].GetHint()&hints > 0 {
-		    s = append(s, e.Params[i].GetName())
+		if e.Params[i].GetHint()&hints > 0 {
+			s = append(s, e.Params[i].GetName())
 		}
 	}
 	if len(s) == 0 {
-	    for i := 0; i < len(e.Params); i++ {
-	        if e.Params[i].GetHint() == 0 {
-		        s = append(s, e.Params[i].GetName())
-		    }
-	    }
+		for i := 0; i < len(e.Params); i++ {
+			if e.Params[i].GetHint() == 0 {
+				s = append(s, e.Params[i].GetName())
+			}
+		}
 	}
 	return s
 }
-
 
 func (e *EmptyRenderModel) GetParameter(name string) RenderParameter {
 	for _, p := range e.Params {
@@ -83,7 +82,7 @@ func (e *EmptyRenderModel) AddParameters(Params ...RenderParameter) {
 }
 
 func (e *EmptyRenderModel) GetRequestPaintFunc() func() {
-    return e.RequestPaint 
+	return e.RequestPaint
 }
 
 func (e *EmptyRenderModel) SetRequestPaintFunc(f func()) {
