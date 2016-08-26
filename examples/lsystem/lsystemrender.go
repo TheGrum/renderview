@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"math"
@@ -55,24 +54,28 @@ func RenderLSystemModel(m *rv.BasicRenderModel, c *rv.ChangeMonitor) image.Image
 	lsystem := m.GetParameter("lsystem").GetValueString()
 	angle := m.GetParameter("angle").GetValueFloat64()
 	depth := m.GetParameter("depth").GetValueInt()
+	if depth > 20 {
+		depth = 20
+		m.GetParameter("depth").SetValueInt(20)
+	}
 	bounds := image.Rect(0, 0, width, height)
 	result := m.GetParameter("LSystemResult").GetValueString()
-	magnitude := 5 * float64(width) / (right - left)
+	magnitude := 1.0 //5 * float64(width) / (right - left)
 
 	if c.HasChanged() {
 		// lsystem or depth has changed, recalculate
 		result = Calculate(lsystem, depth)
 		m.GetParameter("LSystemResult").SetValueString(result)
-		_, minX, minY, dx, dy := RenderLSystem(0, 0, bounds, angle, 1, result)
-		fmt.Printf("Applying %v,%v %vx%v mag:%v calmag:%v\n", minX, minY, dx, dy, magnitude, 5*(dx/float64(width)))
-		mult := (float64(width) / dx) / 5
-		left = minX * mult
-		top = minY * mult
+		_, minX, minY, dx, dy := RenderLSystem(left, top, right, bottom, bounds, angle, 1, result)
+		//fmt.Printf("Applying %v,%v %vx%v mag:%v calmag:%v\n", minX, minY, dx, dy, magnitude, 5*(dx/float64(width)))
+		//mult := (float64(width) / dx) / 5
+		left = minX - 1 //* mult
+		top = minY - 1  //* mult
 		//		mult := magnitude
-		right = left + float64(width)         //* magnitude)
-		bottom = top + dy*(dx/float64(width)) //* magnitude)
-		fmt.Printf("Final %v,%v,%v,%v\n", left, top, right, bottom)
-		magnitude = 5 * float64(width) / (right - left)
+		right = left + dx + 2 //float64(width)         //* magnitude)
+		bottom = top + dy + 2 //*(dx/float64(width)) //* magnitude)
+		//fmt.Printf("Final %v,%v,%v,%v\n", left, top, right, bottom)
+		magnitude = 1.0 //5 * float64(width) / (right - left)
 
 		m.Params[0].SetValueFloat64(left)
 		m.Params[1].SetValueFloat64(top)
@@ -81,11 +84,11 @@ func RenderLSystemModel(m *rv.BasicRenderModel, c *rv.ChangeMonitor) image.Image
 		m.RequestPaint()
 
 	}
-	img, _, _, _, _ := RenderLSystem(left, top, bounds, angle, magnitude, result)
+	img, _, _, _, _ := RenderLSystem(left, top, right, bottom, bounds, angle, magnitude, result)
 	return img
 }
 
-func RenderLSystem(left float64, top float64, bounds image.Rectangle, angle float64, magnitude float64, lsystem string) (*image.RGBA, float64, float64, float64, float64) {
+func RenderLSystem(left float64, top float64, right float64, bottom float64, bounds image.Rectangle, angle float64, magnitude float64, lsystem string) (*image.RGBA, float64, float64, float64, float64) {
 
 	b := image.NewRGBA(bounds)
 
@@ -95,7 +98,12 @@ func RenderLSystem(left float64, top float64, bounds image.Rectangle, angle floa
 	gc.SetStrokeColor(color.Black)
 	gc.SetLineWidth(1)
 
-	location := FPoint{0 - left, 0 - top}
+	dx := right - left
+	//dy := bottom - top
+	mx := float64(bounds.Dx()) / dx
+	my := float64(bounds.Dx()) / dx
+
+	location := FPoint{0, 0}
 	nextLocation := FPoint{0, 0}
 	direction := 90.0
 	theta := direction * radcon
@@ -112,8 +120,8 @@ func RenderLSystem(left float64, top float64, bounds image.Rectangle, angle floa
 		switch rn {
 		case '0', '1', '2', '3', '4', '5', 'A', 'B', 'C', 'D', 'E', 'F', 'G':
 			nextLocation = location.Add(FPoint{magnitude * math.Cos(theta), magnitude * math.Sin(theta)})
-			gc.MoveTo(location.X, location.Y)
-			gc.LineTo(nextLocation.X, nextLocation.Y)
+			gc.MoveTo((location.X-left)*mx, (location.Y-top)*my)
+			gc.LineTo((nextLocation.X-left)*mx, (nextLocation.Y-top)*my)
 			//fmt.Printf("Drawing from %v to %v\n", location, nextLocation)
 			location = nextLocation
 		case 'a', 'b', 'c', 'd', 'e', 'f', 'g':
@@ -141,6 +149,6 @@ func RenderLSystem(left float64, top float64, bounds image.Rectangle, angle floa
 	gc.Stroke()
 	//fmt.Printf("%v, %v, %v, %v, %v, %v\n", minX, minY, maxX, maxY, location.X, location.Y)
 
-	return b, minX + left, minY + top, maxX - minX, maxY - minY
+	return b, minX, minY, maxX - minX, maxY - minY
 
 }

@@ -1,8 +1,8 @@
 package gtk2
 
 import (
-	"fmt"
 	"image"
+	"image/draw"
 	"unsafe"
 
 	rv "renderview"
@@ -224,8 +224,10 @@ func (w *GtkRenderWidget) Draw(ctx *glib.CallbackContext) {
 			w.Image = a
 			w.needsPaint = false
 		default:
-			//todo: copy to an RGBA here
-			fmt.Printf("Missing type handler\n", a)
+			i2 := image.NewRGBA(img.Bounds())
+			draw.Draw(i2, img.Bounds(), img, image.ZP, draw.Src)
+			w.Image = i2
+			w.needsPaint = false
 			return
 		}
 	}
