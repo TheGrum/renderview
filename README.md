@@ -49,13 +49,13 @@ A means to observe a subset of RenderParameters and determine if they have chang
 
 At its most basic, using RenderView with the BasicRenderModel can be as simple as adding a few lines of code:
 
-  m := rv.NewBasicRenderModel()
-  m.AddParameters(DefaultParameters(false, rv.HINT_SIDEBAR, rv.OPT_AUTO_ZOOM, -10, 10, 10, -10)...)
-  m.InnerRender = func() {
-  	// some number of m.Param[x].Value[Float64|Int|etc]() to gather the values your renderer needs
-  	m.Img = your_rendering_function_here(param, param, param)
-  }
-  driver.Main(m)
+    m := rv.NewBasicRenderModel()
+    m.AddParameters(DefaultParameters(false, rv.HINT_SIDEBAR, rv.OPT_AUTO_ZOOM, -10, 10, 10, -10)...)
+    m.InnerRender = func() {
+    	// some number of m.Param[x].Value[Float64|Int|etc]() to gather the values your renderer needs
+    	m.Img = your_rendering_function_here(param, param, param)
+    }
+    driver.Main(m)
 
 Alternately, you can fully specify your parameters, like so:
 
