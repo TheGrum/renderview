@@ -203,16 +203,16 @@ func InitializeBasicRenderModel(m *BasicRenderModel) {
 
 func DefaultParameters(useint bool, hint int, options int, left float64, top float64, right float64, bottom float64) []RenderParameter {
 	if useint {
-		return SetHints(rv.HINT_SIDEBAR,
-			NewIntRP("left", math.Floor(left)),
-			NewIntRP("top", math.Floor(top)),
-			NewIntRP("right", math.Floor(right)),
-			NewIntRP("bottom", math.Floor(bottom)),
+		return SetHints(HINT_SIDEBAR,
+			NewIntRP("left", int(math.Floor(left))),
+			NewIntRP("top", int(math.Floor(top))),
+			NewIntRP("right", int(math.Floor(right))),
+			NewIntRP("bottom", int(math.Floor(bottom))),
 			NewIntRP("width", 100),
 			NewIntRP("height", 100),
 			NewIntRP("options", options))
 	} else {
-		return SetHints(rv.HINT_SIDEBAR,
+		return SetHints(HINT_SIDEBAR,
 			NewFloat64RP("left", left),
 			NewFloat64RP("top", top),
 			NewFloat64RP("right", right),
