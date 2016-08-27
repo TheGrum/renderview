@@ -175,8 +175,8 @@ func (m *BasicRenderModel) GoRender() {
 
 // Start only needs to be called if you have embedded BasicRenderModel in your own struct.
 func (m *BasicRenderModel) Start() {
-	if !started {
-		started = true
+	if !m.started {
+		m.started = true
 		go m.GoRender()
 	}
 }
@@ -203,22 +203,22 @@ func InitializeBasicRenderModel(m *BasicRenderModel) {
 
 func DefaultParameters(useint bool, hint int, options int, left float64, top float64, right float64, bottom float64) []RenderParameter {
 	if useint {
-		return rv.SetHints(rv.HINT_SIDEBAR,
-			rv.NewIntRP("left", math.Floor(left)),
-			rv.NewIntRP("top", math.Floor(top)),
-			rv.NewIntRP("right", math.Floor(right)),
-			rv.NewIntRP("bottom", math.Floor(bottom)),
-			rv.NewIntRP("width", 100),
-			rv.NewIntRP("height", 100),
-			rv.NewIntRP("options", options))
+		return SetHints(rv.HINT_SIDEBAR,
+			NewIntRP("left", math.Floor(left)),
+			NewIntRP("top", math.Floor(top)),
+			NewIntRP("right", math.Floor(right)),
+			NewIntRP("bottom", math.Floor(bottom)),
+			NewIntRP("width", 100),
+			NewIntRP("height", 100),
+			NewIntRP("options", options))
 	} else {
-		return rv.SetHints(rv.HINT_SIDEBAR,
-			rv.NewFloat64RP("left", left),
-			rv.NewFloat64RP("top", top),
-			rv.NewFloat64RP("right", right),
-			rv.NewFloat64RP("bottom", bottom),
-			rv.NewIntRP("width", 100),
-			rv.NewIntRP("height", 100),
-			rv.NewIntRP("options", options))
+		return SetHints(rv.HINT_SIDEBAR,
+			NewFloat64RP("left", left),
+			NewFloat64RP("top", top),
+			NewFloat64RP("right", right),
+			NewFloat64RP("bottom", bottom),
+			NewIntRP("width", 100),
+			NewIntRP("height", 100),
+			NewIntRP("options", options))
 	}
 }
