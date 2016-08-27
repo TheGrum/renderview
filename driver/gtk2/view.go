@@ -1,3 +1,7 @@
+// Copyright 2016 Howard C. Shaw III. All rights reserved.
+// Use of this source code is governed by the MIT-license
+// as defined in the LICENSE file.
+
 package gtk2
 
 import (
@@ -76,7 +80,7 @@ func WrapRenderWidget(r *GtkRenderWidget) gtk.IWidget {
 			sidebar.PackStart(tv, false, false, 1)
 		}
 
-		parent.PackStart(sidebar, false, true, 1)
+		parent.PackStart(sidebar, false, true, 0)
 	}
 	names = r.R.GetHintedParameterNames(rv.HINT_FULLTEXT)
 	if len(names) > 0 {
@@ -85,7 +89,7 @@ func WrapRenderWidget(r *GtkRenderWidget) gtk.IWidget {
 		r.ParamWidgets = append(r.ParamWidgets, tv)
 		parent.PackStart(tv, true, true, 1)
 	}
-	parent.PackEnd(r, true, true, 1)
+	parent.PackEnd(r, true, true, 2)
 	return parent
 }
 
@@ -171,7 +175,8 @@ func NewGtkRenderWidget(r rv.RenderModel) *GtkRenderWidget {
 	w.R.SetRequestPaintFunc(func() {
 		//w.UpdateParamWidgets()
 		w.needsUpdate = true
-		w.GetWindow().Invalidate(nil, false)
+		w.QueueDraw()
+		//w.GetWindow().Invalidate(nil, false)
 	})
 	w.SetCanFocus(true)
 	//	w.SetFocusOnClick(true) // missing?
@@ -228,7 +233,6 @@ func (w *GtkRenderWidget) Draw(ctx *glib.CallbackContext) {
 			draw.Draw(i2, img.Bounds(), img, image.ZP, draw.Src)
 			w.Image = i2
 			w.needsPaint = false
-			return
 		}
 	}
 	// copy from Go image to GDK image

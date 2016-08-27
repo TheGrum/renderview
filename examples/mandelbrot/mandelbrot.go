@@ -1,5 +1,10 @@
+// Copyright 2016 Sonia Keys. All rights reserved.
+// Use of this source code is governed by the MIT-license
+// as defined in the LICENSE_skeys file.
+
 package mandelbrot
 
+// https://soniacodes.wordpress.com/
 // https://rosettacode.org/wiki/Mandelbrot_set#Go
 // minor changes to make it a callable function
 

@@ -1,3 +1,7 @@
+// Copyright 2016 Howard C. Shaw III. All rights reserved.
+// Use of this source code is governed by the MIT-license
+// as defined in the LICENSE file.
+
 package shiny
 
 import (
@@ -5,9 +9,9 @@ import (
 	"image/color"
 	"image/draw"
 	"log"
-	
+
 	rv "renderview"
-	
+
 	"golang.org/x/exp/shiny/widget/theme"
 
 	"golang.org/x/exp/shiny/driver"
@@ -24,14 +28,14 @@ import (
 
 // FrameBuffer sets up a Shiny screen and runs a mainloop rendering the rv.RenderModel
 func FrameBuffer(m rv.RenderModel) {
-    driver.Main(GetMainLoop(m))
+	driver.Main(GetMainLoop(m))
 }
 
 // Main sets up a Shiny screen and runs a mainloop rendering the rv.RenderModel; with widgets
 // when widgets are functional in Shiny
 func Main(m rv.RenderModel) {
-    //driver.Main(GetMainLoopWithWidgets(m))
-    driver.Main(GetMainLoop(m))
+	//driver.Main(GetMainLoopWithWidgets(m))
+	driver.Main(GetMainLoop(m))
 }
 
 func GetMainLoop(r rv.RenderModel) func(s screen.Screen) {
@@ -528,4 +532,3 @@ type ParamEdit struct {
 	P rv.RenderParameter
 	N node.Node
 }
-
