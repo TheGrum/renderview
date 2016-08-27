@@ -49,27 +49,28 @@ A means to observe a subset of RenderParameters and determine if they have chang
 
 At its most basic, using RenderView with the BasicRenderModel can be as simple as adding a few lines of code:
 
-m := rv.NewBasicRenderModel()
-m.AddParameters(DefaultParameters(false, rv.HINT_SIDEBAR, rv.OPT_AUTO_ZOOM, -10, 10, 10, -10)...)
-m.InnerRender = func() {
-	// some number of m.Param[x].Value[Float64|Int|etc]() to gather the values your renderer needs
-	m.Img = your_rendering_function_here(param, param, param)
-}
-driver.Main(m)
+  m := rv.NewBasicRenderModel()
+  m.AddParameters(DefaultParameters(false, rv.HINT_SIDEBAR, rv.OPT_AUTO_ZOOM, -10, 10, 10, -10)...)
+  m.InnerRender = func() {
+  	// some number of m.Param[x].Value[Float64|Int|etc]() to gather the values your renderer needs
+  	m.Img = your_rendering_function_here(param, param, param)
+  }
+  driver.Main(m)
 
 Alternately, you can fully specify your parameters, like so:
-	m.AddParameters(
-		rv.SetHints(rv.HINT_HIDE,
-			rv.NewIntRP("width", 0),
-			rv.NewIntRP("height", 0),
-		)...)
-	m.AddParameters(
-		rv.SetHints(rv.HINT_SIDEBAR,
-		rv.NewIntRP("page", 0),
-		rv.NewIntRP("linewidth", 1),
-		rv.NewIntRP("cellwidth", 5),
-		rv.NewIntRP("mazewidth", 100),
-		rv.NewIntRP("mazeheight", 100))...)
+
+  	m.AddParameters(
+  		rv.SetHints(rv.HINT_HIDE,
+  			rv.NewIntRP("width", 0),
+  			rv.NewIntRP("height", 0),
+  		)...)
+  	m.AddParameters(
+  		rv.SetHints(rv.HINT_SIDEBAR,
+  		rv.NewIntRP("page", 0),
+  		rv.NewIntRP("linewidth", 1),
+  		rv.NewIntRP("cellwidth", 5),
+  		rv.NewIntRP("mazewidth", 100),
+  		rv.NewIntRP("mazeheight", 100))...)
 
 See examples and cmd for more.
 
