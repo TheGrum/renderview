@@ -98,10 +98,10 @@ func WrapRenderWidget(r *GtkRenderWidget) gtk.IWidget {
 }
 
 type GtkRenderWidget struct {
-	*gtk.Image
+	*gtk.DrawingArea
 
-	pixbuf  *gdk.Pixbuf
-	GoImage image.Image
+	pixbuf *gdk.Pixbuf
+	Image  image.Image
 
 	index int
 	R     rv.RenderModel
@@ -132,11 +132,11 @@ type GtkRenderWidget struct {
 }
 
 func NewGtkRenderWidget(r rv.RenderModel) *GtkRenderWidget {
-	i, err := gtk.ImageNew()
+	i, err := gtk.DrawingAreaNew()
 	handleError(err)
 	w := &GtkRenderWidget{
-		Image: i,
-		R:     r,
+		DrawingArea: i,
+		R:           r,
 	}
 	w.left = r.GetParameter("left")
 	w.top = r.GetParameter("top")
@@ -185,10 +185,6 @@ func (w *GtkRenderWidget) UpdateParamWidgets() {
 }
 
 func (w *GtkRenderWidget) Configure() {
-	//fmt.Printf("Configure called.\n")
-	if w.pixbuf != nil {
-		w.pixbuf.Unref()
-	}
 	allocation := w.GetAllocation()
 	w.width.SetValueInt(allocation.GetWidth())
 	w.height.SetValueInt(allocation.GetHeight())
@@ -202,7 +198,7 @@ func (w *GtkRenderWidget) Configure() {
 	w.needsUpdate = true
 }
 
-func (w *GtkRenderWidget) Draw(i *gtk.Image, cr *cairo.Context) {
+func (w *GtkRenderWidget) Draw(da *gtk.DrawingArea, cr *cairo.Context) {
 	if w.needsUpdate {
 		w.UpdateParamWidgets()
 	}
@@ -213,34 +209,36 @@ func (w *GtkRenderWidget) Draw(i *gtk.Image, cr *cairo.Context) {
 		}
 		switch a := img.(type) {
 		case *image.RGBA:
-			w.GoImage = a
+			w.Image = a
 			w.needsPaint = false
 		case *image.NRGBA:
-			w.GoImage = a
+			w.Image = a
 			w.needsPaint = false
 		default:
 			i2 := image.NewRGBA(img.Bounds())
 			draw.Draw(i2, img.Bounds(), img, image.ZP, draw.Src)
-			w.GoImage = i2
+			w.Image = i2
 			w.needsPaint = false
 		}
 	}
 	// copy from Go image to GDK image
 	//w.pixbuf.Fill(0)
-	switch a := w.GoImage.(type) {
+	switch a := w.Image.(type) {
 	case *image.RGBA:
 		GdkPixelCopy(a, w.pixbuf, image.ZR, image.ZP)
 	case *image.NRGBA:
 		GdkPixelCopyNRGBA(a, w.pixbuf, image.ZR, image.ZP)
 	}
 
-	i.SetFromPixbuf(w.pixbuf)
+	gtk.GdkCairoSetSourcePixBuf(cr, w.pixbuf, 0, 0)
+	cr.Paint()
 
-	// Draw GDK image on window
-	//win, _ := w.GetWindow()
-	//draw := win.GetDrawable()
-	//gc := gdk.NewGC(draw)
-	//cr.SetSourcePixbuf(w.pixbuf, 0, 0)
+	var err error
+	allocation := w.GetAllocation()
+	w.pixbuf, err = gdk.PixbufNew(gdk.COLORSPACE_RGB, true, 8, allocation.GetWidth(), allocation.GetHeight())
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func GdkPixelCopy(source *image.RGBA, target *gdk.Pixbuf, region image.Rectangle, targetOffset image.Point) {
@@ -309,7 +307,8 @@ func GdkPixelCopyNRGBA(source *image.NRGBA, target *gdk.Pixbuf, region image.Rec
 	}
 }
 
-func (w *GtkRenderWidget) OnScroll(e *gdk.EventScroll) {
+func (w *GtkRenderWidget) OnScroll(da *gtk.DrawingArea, ge *gdk.Event) {
+	e := &gdk.EventScroll{ge}
 	if e.Direction() == gdk.SCROLL_DOWN {
 		if w.zoomIsFloat64 {
 			w.zoom.SetValueFloat64(w.zoom.GetValueFloat64() - 1)
@@ -370,7 +369,8 @@ func (w *GtkRenderWidget) OnScroll(e *gdk.EventScroll) {
 
 }
 
-func (w *GtkRenderWidget) OnMotion(e *gdk.EventMotion) {
+func (w *GtkRenderWidget) OnMotion(da *gtk.DrawingArea, ge *gdk.Event) {
+	e := &gdk.EventMotion{ge}
 	//	fmt.Printf("Motion: X:%v Y:%v sx:%v sy:%v mouseIsDown:%v dragging:%v\n", e.X, e.Y, w.sx, w.sy, w.mouseIsDown, w.dragging)
 	var X, Y float64
 	X, Y = e.MotionVal()
@@ -419,8 +419,9 @@ func (w *GtkRenderWidget) OnMotion(e *gdk.EventMotion) {
 
 }
 
-func (w *GtkRenderWidget) OnButton(e *gdk.EventButton) {
-	//	fmt.Printf("Button called with %v\n", e)
+func (w *GtkRenderWidget) OnButton(da *gtk.DrawingArea, ge *gdk.Event) {
+	e := &gdk.EventButton{ge}
+	//	fmt.Printf("Button called with %v\n", e)i
 	w.mouseX.SetValueFloat64(e.X())
 	w.mouseY.SetValueFloat64(e.Y())
 	w.GrabFocus()
@@ -445,7 +446,8 @@ const (
 	PAGE_DOWN uint = 0xff56
 )
 
-func (w *GtkRenderWidget) OnKeyPress(e *gdk.EventKey) {
+func (w *GtkRenderWidget) OnKeyPress(da *gtk.DrawingArea, ge *gdk.Event) {
+	e := &gdk.EventKey{ge}
 	if e.KeyVal() == PAGE_UP {
 		w.page.SetValueInt(w.page.GetValueInt() - 1)
 		w.needsUpdate = true
