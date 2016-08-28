@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT-license
 // as defined in the LICENSE file.
 
-// +build gotk3,linux,!android
+// +build gotk3,!android,!gtk2,!shiny
 
 package driver
 
