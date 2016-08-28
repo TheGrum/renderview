@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT-license
 // as defined in the LICENSE file.
 
-// +build !gotk3,!android,!shiny
+// +build !nogtk2,!gotk3 !nogtk2,!android !nogtk2,!shiny
 
 package driver
 

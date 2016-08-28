@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT-license
 // as defined in the LICENSE file.
 
-// +build !gotk3,!shiny
+// +build !gotk3,!nogtk2 !shiny,!nogtk2
 
 package gtk2
 
