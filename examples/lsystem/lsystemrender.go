@@ -144,7 +144,10 @@ func RenderLSystem(left float64, top float64, right float64, bottom float64, bou
 				state := stack[len(stack)-1]
 				location = state.Location
 				direction = state.Direction
+<<<<<<< HEAD
 				stack = stack[:len(stack)-1]
+=======
+>>>>>>> e0fc460b97ddda8c1fa010b4ad8573c945ecde99
 			}
 		}
 		maxX = FMax(maxX, location.X)

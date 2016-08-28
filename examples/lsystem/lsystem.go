@@ -2,8 +2,11 @@
 // Use of this source code is governed by the MIT-license
 // as defined in the LICENSE file.
 
+<<<<<<< HEAD
 // +build example
 
+=======
+>>>>>>> e0fc460b97ddda8c1fa010b4ad8573c945ecde99
 package main
 
 import (
