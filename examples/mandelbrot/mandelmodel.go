@@ -6,10 +6,7 @@ package mandelbrot
 
 import (
 	"math"
-<<<<<<< HEAD
-=======
 
->>>>>>> e0fc460b97ddda8c1fa010b4ad8573c945ecde99
 	rv "github.com/TheGrum/renderview"
 )
 
