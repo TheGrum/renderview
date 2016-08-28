@@ -7,8 +7,8 @@
 package driver
 
 import (
-	rv "renderview"
-	"renderview/driver/gtk2"
+	rv "github.com/TheGrum/renderview"
+	"github.com/TheGrum/renderview/driver/gtk2"
 )
 
 func framebuffer(m rv.RenderModel) {

@@ -11,7 +11,7 @@ import (
 	"image/color"
 	"math"
 
-	rv "renderview"
+	rv "github.com/TheGrum/renderview"
 
 	"github.com/llgcode/draw2d/draw2dimg"
 )

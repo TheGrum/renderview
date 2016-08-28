@@ -5,8 +5,8 @@
 package main
 
 import (
-	rv "renderview"
-	"renderview/driver"
+	rv "github.com/TheGrum/renderview"
+	"github.com/TheGrum/renderview/driver"
 )
 
 func main() {

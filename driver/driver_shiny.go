@@ -7,8 +7,8 @@
 package driver
 
 import (
-	rv "renderview"
-	"renderview/driver/shiny"
+	rv "github.com/TheGrum/renderview"
+	"github.com/TheGrum/renderview/driver/shiny"
 )
 
 func framebuffer(m rv.RenderModel) {

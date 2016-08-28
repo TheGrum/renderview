@@ -9,7 +9,7 @@ import (
 	"image/draw"
 	"unsafe"
 
-	rv "renderview"
+	rv "github.com/TheGrum/renderview"
 
 	"github.com/mattn/go-gtk/gdk"
 	"github.com/mattn/go-gtk/gdkpixbuf"

@@ -15,11 +15,12 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"renderview/driver"
 	"strconv"
 	"strings"
 
-	rv "renderview"
+	"github.com/TheGrum/renderview/driver"
+
+	rv "github.com/TheGrum/renderview"
 )
 
 var (

@@ -9,9 +9,10 @@ import (
 	"image"
 	"image/color"
 	"math/rand"
-	rv "renderview"
-	"renderview/driver"
 	"time"
+
+	rv "github.com/TheGrum/renderview"
+	"github.com/TheGrum/renderview/driver"
 
 	"github.com/llgcode/draw2d/draw2dimg"
 )

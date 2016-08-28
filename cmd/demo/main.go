@@ -5,8 +5,8 @@
 package main
 
 import (
-	"renderview"
-	"renderview/examples/mandelbrot"
+	"github.com/TheGrum/renderview"
+	"github.com/TheGrum/renderview/examples/mandelbrot"
 )
 
 func main() {
