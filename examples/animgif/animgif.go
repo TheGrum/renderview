@@ -12,10 +12,10 @@ import (
 	"log"
 	"math"
 	"os"
-	rv "renderview"
 	"time"
 
-	"renderview/driver/shiny"
+	rv "github.com/TheGrum/renderview"
+	"github.com/TheGrum/renderview/driver/shiny"
 )
 
 func main() {

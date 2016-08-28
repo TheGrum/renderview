@@ -11,7 +11,7 @@ import (
 	"image/color"
 	"math"
 
-	rv "renderview"
+	rv "github.com/TheGrum/renderview"
 
 	"github.com/llgcode/draw2d/draw2dimg"
 )
@@ -144,6 +144,7 @@ func RenderLSystem(left float64, top float64, right float64, bottom float64, bou
 				state := stack[len(stack)-1]
 				location = state.Location
 				direction = state.Direction
+				stack = stack[:len(stack)-1]
 			}
 		}
 		maxX = FMax(maxX, location.X)

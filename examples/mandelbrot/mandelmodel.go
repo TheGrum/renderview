@@ -6,7 +6,7 @@ package mandelbrot
 
 import (
 	"math"
-	rv "renderview"
+	rv "github.com/TheGrum/renderview"
 )
 
 type MandelModel rv.BasicRenderModel

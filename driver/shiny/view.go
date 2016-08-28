@@ -10,7 +10,7 @@ import (
 	"image/draw"
 	"log"
 
-	rv "renderview"
+	rv "github.com/TheGrum/renderview"
 
 	"golang.org/x/exp/shiny/widget/theme"
 

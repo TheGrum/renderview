@@ -2,27 +2,28 @@
 // Use of this source code is governed by the MIT-license
 // as defined in the LICENSE file.
 
-package gtk2
+// +build gotk3
+
+package gotk3
 
 import (
 	"image"
 	"image/draw"
-	"unsafe"
+	"log"
 
 	rv "github.com/TheGrum/renderview"
 
-	"github.com/mattn/go-gtk/gdk"
-	"github.com/mattn/go-gtk/gdkpixbuf"
-	"github.com/mattn/go-gtk/glib"
-	"github.com/mattn/go-gtk/gtk"
+	"github.com/gotk3/gotk3/cairo"
+	"github.com/gotk3/gotk3/gdk"
+	"github.com/gotk3/gotk3/gtk"
 )
 
-// FrameBuffer sets up a GTK2 Window and runs a mainloop rendering the RenderModel
+// FrameBuffer sets up a GTK3 Window and runs a mainloop rendering the RenderModel
 func FrameBuffer(m rv.RenderModel) {
 	GtkWindowInit(m)
 }
 
-// Main sets up a GTK2 Window with widgets for editing parameters and runs a
+// Main sets up a GTK3 Window with widgets for editing parameters and runs a
 // mainloop rendering the RenderModel
 func Main(m rv.RenderModel) {
 	GtkWindowWithWidgetsInit(m)
@@ -31,12 +32,11 @@ func Main(m rv.RenderModel) {
 func GtkWindowInit(r rv.RenderModel) {
 	gtk.Init(nil)
 	window := GetGtkWindow(r, false)
-	window.Connect("destroy", func(ctx *glib.CallbackContext) {
-		//		println("got destroy!", ctx.Data().(string))
+	window.Connect("destroy", func() {
 		gtk.MainQuit()
-	}, "foo")
+	})
 
-	window.SetSizeRequest(400, 400)
+	window.SetDefaultSize(400, 400)
 	window.ShowAll()
 	gtk.Main()
 }
@@ -44,10 +44,9 @@ func GtkWindowInit(r rv.RenderModel) {
 func GtkWindowWithWidgetsInit(r rv.RenderModel) {
 	gtk.Init(nil)
 	window := GetGtkWindow(r, true)
-	window.Connect("destroy", func(ctx *glib.CallbackContext) {
-		//		println("got destroy!", ctx.Data().(string))
+	window.Connect("destroy", func() {
 		gtk.MainQuit()
-	}, "foo")
+	})
 
 	window.SetSizeRequest(400, 400)
 	window.ShowAll()
@@ -55,7 +54,10 @@ func GtkWindowWithWidgetsInit(r rv.RenderModel) {
 }
 
 func GetGtkWindow(r rv.RenderModel, addWidgets bool) *gtk.Window {
-	window := gtk.NewWindow(gtk.WINDOW_TOPLEVEL)
+	window, err := gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
+	if err != nil {
+		log.Fatal("Unable to create window:", err)
+	}
 	var child gtk.IWidget
 	render := NewGtkRenderWidget(r)
 	child = render
@@ -67,14 +69,16 @@ func GetGtkWindow(r rv.RenderModel, addWidgets bool) *gtk.Window {
 }
 
 func WrapRenderWidget(r *GtkRenderWidget) gtk.IWidget {
-	parent := gtk.NewHBox(false, 1)
-	sidebar := gtk.NewVBox(false, 1)
+	parent, _ := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 1)
+	sidebar, _ := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 1)
 	names := r.R.GetHintedParameterNamesWithFallback(rv.HINT_SIDEBAR | rv.HINT_FOOTER)
 	if len(names) > 0 {
-		sidebar.PackStart(gtk.NewLabel("________Parameters________"), false, false, 1)
+		label, _ := gtk.LabelNew("________Parameters________")
+		sidebar.PackStart(label, false, false, 1)
 
 		for i := 0; i < len(names); i++ {
-			sidebar.PackStart(gtk.NewLabel(names[i]), false, false, 1)
+			label, _ = gtk.LabelNew(names[i])
+			sidebar.PackStart(label, false, false, 1)
 			tv := NewGtkParamWidget(r.R.GetParameter(names[i]), r)
 			r.ParamWidgets = append(r.ParamWidgets, tv)
 			sidebar.PackStart(tv, false, false, 1)
@@ -94,10 +98,10 @@ func WrapRenderWidget(r *GtkRenderWidget) gtk.IWidget {
 }
 
 type GtkRenderWidget struct {
-	*gtk.DrawingArea
+	*gtk.Image
 
-	pixbuf *gdkpixbuf.Pixbuf
-	Image  image.Image
+	pixbuf  *gdk.Pixbuf
+	GoImage image.Image
 
 	index int
 	R     rv.RenderModel
@@ -128,9 +132,11 @@ type GtkRenderWidget struct {
 }
 
 func NewGtkRenderWidget(r rv.RenderModel) *GtkRenderWidget {
+	i, err := gtk.ImageNew()
+	handleError(err)
 	w := &GtkRenderWidget{
-		DrawingArea: gtk.NewDrawingArea(),
-		R:           r,
+		Image: i,
+		R:     r,
 	}
 	w.left = r.GetParameter("left")
 	w.top = r.GetParameter("top")
@@ -145,33 +151,13 @@ func NewGtkRenderWidget(r rv.RenderModel) *GtkRenderWidget {
 	w.page = r.GetParameter("page")
 	w.leftIsFloat64 = w.left.GetType() == "float64"
 	w.zoomIsFloat64 = w.zoom.GetType() == "float64"
-	w.Connect("expose-event", w.Draw)
+	w.Connect("draw", w.Draw)
 	w.Connect("configure-event", w.Configure)
-	w.Connect("motion-notify-event", func(ctx *glib.CallbackContext) {
-		arg := ctx.Args(0)
-		mev := *(**gdk.EventMotion)(unsafe.Pointer(&arg))
-		w.OnMotion(mev)
-	})
-	w.Connect("button-press-event", func(ctx *glib.CallbackContext) {
-		arg := ctx.Args(0)
-		mev := *(**gdk.EventButton)(unsafe.Pointer(&arg))
-		w.OnButton(mev)
-	})
-	w.Connect("button-release-event", func(ctx *glib.CallbackContext) {
-		arg := ctx.Args(0)
-		mev := *(**gdk.EventButton)(unsafe.Pointer(&arg))
-		w.OnButton(mev)
-	})
-	w.Connect("scroll-event", func(ctx *glib.CallbackContext) {
-		arg := ctx.Args(0)
-		sev := *(**gdk.EventScroll)(unsafe.Pointer(&arg))
-		w.OnScroll(sev)
-	})
-	w.Connect("key-press-event", func(ctx *glib.CallbackContext) {
-		arg := ctx.Args(0)
-		kev := *(**gdk.EventKey)(unsafe.Pointer(&arg))
-		w.OnKeyPress(kev)
-	})
+	w.Connect("motion-notify-event", w.OnMotion)
+	w.Connect("button-press-event", w.OnButton)
+	w.Connect("button-release-event", w.OnButton)
+	w.Connect("scroll-event", w.OnScroll)
+	w.Connect("key-press-event", w.OnKeyPress)
 	w.R.SetRequestPaintFunc(func() {
 		//w.UpdateParamWidgets()
 		w.needsUpdate = true
@@ -204,15 +190,19 @@ func (w *GtkRenderWidget) Configure() {
 		w.pixbuf.Unref()
 	}
 	allocation := w.GetAllocation()
-	w.width.SetValueInt(allocation.Width)
-	w.height.SetValueInt(allocation.Height)
+	w.width.SetValueInt(allocation.GetWidth())
+	w.height.SetValueInt(allocation.GetHeight())
 
-	w.pixbuf = gdkpixbuf.NewPixbuf(gdkpixbuf.GDK_COLORSPACE_RGB, true, 8, allocation.Width, allocation.Height)
+	var err error
+	w.pixbuf, err = gdk.PixbufNew(gdk.COLORSPACE_RGB, true, 8, allocation.GetWidth(), allocation.GetHeight())
+	if err != nil {
+		log.Fatal(err)
+	}
 	w.needsPaint = true
 	w.needsUpdate = true
 }
 
-func (w *GtkRenderWidget) Draw(ctx *glib.CallbackContext) {
+func (w *GtkRenderWidget) Draw(i *gtk.Image, cr *cairo.Context) {
 	if w.needsUpdate {
 		w.UpdateParamWidgets()
 	}
@@ -223,35 +213,37 @@ func (w *GtkRenderWidget) Draw(ctx *glib.CallbackContext) {
 		}
 		switch a := img.(type) {
 		case *image.RGBA:
-			w.Image = a
+			w.GoImage = a
 			w.needsPaint = false
 		case *image.NRGBA:
-			w.Image = a
+			w.GoImage = a
 			w.needsPaint = false
 		default:
 			i2 := image.NewRGBA(img.Bounds())
 			draw.Draw(i2, img.Bounds(), img, image.ZP, draw.Src)
-			w.Image = i2
+			w.GoImage = i2
 			w.needsPaint = false
 		}
 	}
 	// copy from Go image to GDK image
-	w.pixbuf.Fill(0)
-	switch a := w.Image.(type) {
+	//w.pixbuf.Fill(0)
+	switch a := w.GoImage.(type) {
 	case *image.RGBA:
 		GdkPixelCopy(a, w.pixbuf, image.ZR, image.ZP)
 	case *image.NRGBA:
 		GdkPixelCopyNRGBA(a, w.pixbuf, image.ZR, image.ZP)
 	}
 
+	i.SetFromPixbuf(w.pixbuf)
+
 	// Draw GDK image on window
-	win := w.GetWindow()
-	draw := win.GetDrawable()
-	gc := gdk.NewGC(draw)
-	draw.DrawPixbuf(gc, w.pixbuf, 0, 0, 0, 0, w.pixbuf.GetWidth(), w.pixbuf.GetHeight(), gdk.RGB_DITHER_NONE, 0, 0)
+	//win, _ := w.GetWindow()
+	//draw := win.GetDrawable()
+	//gc := gdk.NewGC(draw)
+	//cr.SetSourcePixbuf(w.pixbuf, 0, 0)
 }
 
-func GdkPixelCopy(source *image.RGBA, target *gdkpixbuf.Pixbuf, region image.Rectangle, targetOffset image.Point) {
+func GdkPixelCopy(source *image.RGBA, target *gdk.Pixbuf, region image.Rectangle, targetOffset image.Point) {
 	if source == nil {
 		return
 	}
@@ -265,7 +257,7 @@ func GdkPixelCopy(source *image.RGBA, target *gdkpixbuf.Pixbuf, region image.Rec
 	//Pix[(y-Rect.Min.Y)*Stride + (x-Rect.Min.X)*4]
 	var targetPix []byte
 	var sourcePix []uint8
-	targetPix = target.GetPixelsWithLength()
+	targetPix = target.GetPixels()
 	sourcePix = source.Pix
 
 	if region.Dx() == 0 {
@@ -284,7 +276,7 @@ func GdkPixelCopy(source *image.RGBA, target *gdkpixbuf.Pixbuf, region image.Rec
 	}
 }
 
-func GdkPixelCopyNRGBA(source *image.NRGBA, target *gdkpixbuf.Pixbuf, region image.Rectangle, targetOffset image.Point) {
+func GdkPixelCopyNRGBA(source *image.NRGBA, target *gdk.Pixbuf, region image.Rectangle, targetOffset image.Point) {
 	if source == nil {
 		return
 	}
@@ -298,7 +290,7 @@ func GdkPixelCopyNRGBA(source *image.NRGBA, target *gdkpixbuf.Pixbuf, region ima
 	//Pix[(y-Rect.Min.Y)*Stride + (x-Rect.Min.X)*4]
 	var targetPix []byte
 	var sourcePix []uint8
-	targetPix = target.GetPixelsWithLength()
+	targetPix = target.GetPixels()
 	sourcePix = source.Pix
 
 	if region.Dx() == 0 {
@@ -318,10 +310,7 @@ func GdkPixelCopyNRGBA(source *image.NRGBA, target *gdkpixbuf.Pixbuf, region ima
 }
 
 func (w *GtkRenderWidget) OnScroll(e *gdk.EventScroll) {
-	// the case of SCROLL_Down is incorrect in gdk.go
-	// todo: fix this when it is fixed upstream
-	// e.Direction always has same value, and does not match documentation
-	if gdk.ModifierType(e.State) > (1 << 30) {
+	if e.Direction() == gdk.SCROLL_DOWN {
 		if w.zoomIsFloat64 {
 			w.zoom.SetValueFloat64(w.zoom.GetValueFloat64() - 1)
 		} else {
@@ -335,8 +324,8 @@ func (w *GtkRenderWidget) OnScroll(e *gdk.EventScroll) {
 				zheight := w.bottom.GetValueFloat64() - w.top.GetValueFloat64()
 				nzwidth := zwidth * mult
 				nzheight := zheight * mult
-				cx := float64(e.X) / float64(w.width.GetValueInt())
-				cy := float64(e.Y) / float64(w.height.GetValueInt())
+				cx := float64(e.X()) / float64(w.width.GetValueInt())
+				cy := float64(e.Y()) / float64(w.height.GetValueInt())
 				if w.options.GetValueInt()&rv.OPT_CENTER_ZOOM == rv.OPT_CENTER_ZOOM {
 					cx = 0.5
 					cy = 0.5
@@ -363,8 +352,8 @@ func (w *GtkRenderWidget) OnScroll(e *gdk.EventScroll) {
 				zheight := w.bottom.GetValueFloat64() - w.top.GetValueFloat64()
 				nzwidth := zwidth * mult
 				nzheight := zheight * mult
-				cx := float64(e.X) / float64(w.width.GetValueInt())
-				cy := float64(e.Y) / float64(w.height.GetValueInt())
+				cx := float64(e.X()) / float64(w.width.GetValueInt())
+				cy := float64(e.Y()) / float64(w.height.GetValueInt())
 				if w.options.GetValueInt()&rv.OPT_CENTER_ZOOM == rv.OPT_CENTER_ZOOM {
 					cx = 0.5
 					cy = 0.5
@@ -383,11 +372,13 @@ func (w *GtkRenderWidget) OnScroll(e *gdk.EventScroll) {
 
 func (w *GtkRenderWidget) OnMotion(e *gdk.EventMotion) {
 	//	fmt.Printf("Motion: X:%v Y:%v sx:%v sy:%v mouseIsDown:%v dragging:%v\n", e.X, e.Y, w.sx, w.sy, w.mouseIsDown, w.dragging)
-	w.mouseX.SetValueFloat64(float64(e.X))
-	w.mouseY.SetValueFloat64(float64(e.Y))
+	var X, Y float64
+	X, Y = e.MotionVal()
+	w.mouseX.SetValueFloat64(X)
+	w.mouseY.SetValueFloat64(Y)
 
 	if w.mouseIsDown && w.dragging == false {
-		if ((e.X - w.sx) > 3) || ((w.sx - e.X) > 3) || ((e.Y - w.sy) > 3) || ((w.sy - e.Y) > 3) {
+		if ((X - w.sx) > 3) || ((w.sx - X) > 3) || ((Y - w.sy) > 3) || ((w.sy - Y) > 3) {
 			w.dragging = true
 		}
 	}
@@ -398,8 +389,8 @@ func (w *GtkRenderWidget) OnMotion(e *gdk.EventMotion) {
 			height := w.bottom.GetValueFloat64() - w.top.GetValueFloat64()
 			dx := width / float64(w.width.GetValueInt())
 			dy := height / float64(w.height.GetValueInt())
-			cx := float64(e.X-w.sx) * dx
-			cy := float64(e.Y-w.sy) * dy
+			cx := float64(X-w.sx) * dx
+			cy := float64(Y-w.sy) * dy
 			//						fmt.Printf("dx %v dy %v cx %v cy %v\n", dx, dy, cx, cy)
 			w.left.SetValueFloat64(w.left.GetValueFloat64() - cx)
 			w.right.SetValueFloat64(w.right.GetValueFloat64() - cx)
@@ -410,8 +401,8 @@ func (w *GtkRenderWidget) OnMotion(e *gdk.EventMotion) {
 			height := w.bottom.GetValueInt() - w.top.GetValueInt()
 			dx := float64(width) / float64(w.width.GetValueInt())
 			dy := float64(height) / float64(w.height.GetValueInt())
-			cx := float64(e.X-w.sx) * dx
-			cy := float64(e.Y-w.sy) * dy
+			cx := float64(X-w.sx) * dx
+			cy := float64(Y-w.sy) * dy
 			w.left.SetValueInt(int(float64(w.left.GetValueInt()) - cx))
 			w.right.SetValueInt(int(float64(w.right.GetValueInt()) - cx))
 			w.top.SetValueInt(int(float64(w.top.GetValueInt()) - cy))
@@ -421,8 +412,8 @@ func (w *GtkRenderWidget) OnMotion(e *gdk.EventMotion) {
 		w.needsUpdate = true
 		w.SetNeedsPaint()
 
-		w.sx = e.X
-		w.sy = e.Y
+		w.sx = X
+		w.sy = Y
 
 	}
 
@@ -430,32 +421,37 @@ func (w *GtkRenderWidget) OnMotion(e *gdk.EventMotion) {
 
 func (w *GtkRenderWidget) OnButton(e *gdk.EventButton) {
 	//	fmt.Printf("Button called with %v\n", e)
-	w.mouseX.SetValueFloat64(float64(e.X))
-	w.mouseY.SetValueFloat64(float64(e.Y))
+	w.mouseX.SetValueFloat64(e.X())
+	w.mouseY.SetValueFloat64(e.Y())
 	w.GrabFocus()
 
-	if gdk.EventType(e.Type) == gdk.BUTTON_PRESS {
-		if w.dragging == false && w.mouseIsDown == false && e.Button == 1 {
+	if gdk.EventType(e.Type()) == gdk.EVENT_BUTTON_PRESS {
+		if w.dragging == false && w.mouseIsDown == false && e.Button() == 1 {
 			//			fmt.Println("Mousedown")
-			w.sx = e.X
-			w.sy = e.Y
+			w.sx = e.X()
+			w.sy = e.Y()
 			w.mouseIsDown = true
 		}
 	}
-	if gdk.EventType(e.Type) == gdk.BUTTON_RELEASE {
+	if gdk.EventType(e.Type()) == gdk.EVENT_BUTTON_RELEASE {
 		//		fmt.Println("Mouseup")
 		w.mouseIsDown = false
 		w.dragging = false
 	}
 }
 
+const (
+	PAGE_UP   uint = 0xff55
+	PAGE_DOWN uint = 0xff56
+)
+
 func (w *GtkRenderWidget) OnKeyPress(e *gdk.EventKey) {
-	if e.Keyval == gdk.KEY_Page_Up {
+	if e.KeyVal() == PAGE_UP {
 		w.page.SetValueInt(w.page.GetValueInt() - 1)
 		w.needsUpdate = true
 		w.SetNeedsPaint()
 	}
-	if e.Keyval == gdk.KEY_Page_Down {
+	if e.KeyVal() == PAGE_DOWN {
 		w.page.SetValueInt(w.page.GetValueInt() + 1)
 		w.needsUpdate = true
 		w.SetNeedsPaint()
@@ -468,19 +464,28 @@ type GtkParamWidget struct {
 }
 
 func NewGtkParamWidget(p rv.RenderParameter, w *GtkRenderWidget) *GtkParamWidget {
-	tv := gtk.NewTextView()
+	tv, err := gtk.TextViewNew()
+	if err != nil {
+		log.Fatal(err)
+	}
 	r := &GtkParamWidget{
 		IWidget: tv,
 		P:       p,
 	}
 	tv.SetEditable(true)
 	tv.SetCursorVisible(true)
-	tb := tv.GetBuffer()
+	tb, err := tv.GetBuffer()
+	if err != nil {
+		log.Fatal(err)
+	}
 	tb.SetText(rv.GetParameterValueAsString(p))
 	tb.Connect("changed", func() {
-		var start, end gtk.TextIter
-		tb.GetBounds(&start, &end)
-		s := tb.GetText(&start, &end, false)
+		var start, end *gtk.TextIter
+		start, end = tb.GetBounds()
+		s, err := tb.GetText(start, end, false)
+		if err != nil {
+			log.Fatal(err)
+		}
 		pValue := rv.GetParameterValueAsString(r.P)
 		if s != pValue {
 			rv.SetParameterValueFromString(r.P, s)
@@ -493,7 +498,16 @@ func NewGtkParamWidget(p rv.RenderParameter, w *GtkRenderWidget) *GtkParamWidget
 func (w *GtkParamWidget) Update() {
 	switch a := w.IWidget.(type) {
 	case *gtk.TextView:
-		tb := a.GetBuffer()
+		tb, err := a.GetBuffer()
+		if err != nil {
+			log.Fatal(err)
+		}
 		tb.SetText(rv.GetParameterValueAsString(w.P))
+	}
+}
+
+func handleError(err error) {
+	if err != nil {
+		log.Fatal(err)
 	}
 }

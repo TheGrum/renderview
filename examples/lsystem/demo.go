@@ -2,11 +2,16 @@
 // Use of this source code is governed by the MIT-license
 // as defined in the LICENSE file.
 
+// +build example
+// marked as an example to not build automatically,
+// go build -tags 'example'
+// in this directory to build
+
 package main
 
 import (
-	rv "renderview"
-	"renderview/driver"
+	rv "github.com/TheGrum/renderview"
+	"github.com/TheGrum/renderview/driver"
 )
 
 func main() {

@@ -6,7 +6,7 @@
 package driver
 
 import (
-	rv "renderview"
+	rv "github.com/TheGrum/renderview"
 )
 
 // FrameBuffer sets up a full-window rendering method
