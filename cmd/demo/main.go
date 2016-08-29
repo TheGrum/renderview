@@ -5,13 +5,12 @@
 package main
 
 import (
-	"github.com/TheGrum/renderview"
+	"renderview/driver"
+
 	"github.com/TheGrum/renderview/examples/mandelbrot"
 )
 
 func main() {
 	m := mandelbrot.NewMandelModel()
-	renderview.GtkWindowWithWidgetsInit(m)
-	//	driver.Main(renderview.GetMainLoop(m))
-
+	driver.Main(m)
 }
