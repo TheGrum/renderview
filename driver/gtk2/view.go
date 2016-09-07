@@ -114,7 +114,8 @@ type GtkRenderWidget struct {
 	mouseX,
 	mouseY,
 	options,
-	page rv.RenderParameter
+	page,
+	zoomRate rv.RenderParameter
 
 	sx,
 	sy float64
@@ -145,6 +146,7 @@ func NewGtkRenderWidget(r rv.RenderModel) *GtkRenderWidget {
 	w.mouseY = r.GetParameter("mouseY")
 	w.options = r.GetParameter("options")
 	w.page = r.GetParameter("page")
+	w.zoomRate = r.GetParameter("zoomRate")
 	w.leftIsFloat64 = w.left.GetType() == "float64"
 	w.zoomIsFloat64 = w.zoom.GetType() == "float64"
 	w.Connect("expose-event", w.Draw)
@@ -331,6 +333,9 @@ func (w *GtkRenderWidget) OnScroll(e *gdk.EventScroll) {
 		}
 		if w.options.GetValueInt()&rv.OPT_AUTO_ZOOM == rv.OPT_AUTO_ZOOM || w.options.GetValueInt()&rv.OPT_CENTER_ZOOM == rv.OPT_CENTER_ZOOM {
 			mult := 1 + rv.ZOOM_RATE
+			if w.zoomRate.GetValueFloat64() > 0 {
+				mult = 1 + w.zoomRate.GetValueFloat64()
+			}
 			if w.leftIsFloat64 {
 
 				zwidth := w.right.GetValueFloat64() - w.left.GetValueFloat64()
@@ -360,6 +365,9 @@ func (w *GtkRenderWidget) OnScroll(e *gdk.EventScroll) {
 		}
 		if w.options.GetValueInt()&rv.OPT_AUTO_ZOOM == rv.OPT_AUTO_ZOOM || w.options.GetValueInt()&rv.OPT_CENTER_ZOOM == rv.OPT_CENTER_ZOOM {
 			mult := 1 - rv.ZOOM_RATE
+			if w.zoomRate.GetValueFloat64() > 0 {
+				mult = 1 - w.zoomRate.GetValueFloat64()
+			}
 			if w.leftIsFloat64 {
 				zwidth := w.right.GetValueFloat64() - w.left.GetValueFloat64()
 				zheight := w.bottom.GetValueFloat64() - w.top.GetValueFloat64()

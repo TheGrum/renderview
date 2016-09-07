@@ -7,7 +7,7 @@ This is *not* meant as a replacement for a general GUI toolkit. It is meant for 
 
 # Model-View-Controller #
 
-Basically, this is a View+Controller combination that operates on a Model you write - except that for many tasks, the built-in models will suffice, and all you have to implement is an image generation function.
+Basically, this is a View+Controller combination that operates on a Model you write - except that for many tasks, the built-in models will suffice, and all you have to implement is an image generation function. (Technically, I suppose, it is actually splitting the View into two parts, one that you writefor the image generation, and one that RenderView sets up for editing parameters.)
 
 # RenderView #
 
@@ -20,6 +20,10 @@ Shiny is an experimental native cross-platform GUI package for Go. At the moment
 # go-gtk #
 
 go-gtk is a functional CGo based GTK2 binding. RenderView on the go-gtk backend supports automatic parameter editing widget generation in addition to the interactive image.
+
+# gotk3 #
+
+gotk3 is a functional CGo based GTK3 binding. RenderView on the gotk3 backend supports automatic parameter editing widget generation in addition to the interactive image.
 
 # RenderModel #
 
@@ -82,3 +86,5 @@ More than an example, this is a tool that applies the automatic GUI creation con
     ./cmdgui -extraflags="func,string,sin(x);x" "./plot" "{{$.func}} {{$.left}} {{$.right}} {{$.bottom}} {{$.top}}"
 
 This one line example takes a python command line plot generator, and turns it into an interactive function plotter supporting changing the function, panning, zooming, and hand-entering of plot axis dimensions.
+
+
