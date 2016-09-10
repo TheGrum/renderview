@@ -126,7 +126,7 @@ func GenericTilesFromBounds(t TileMapper, a LatLon, b LatLon, maxWidth uint, max
 		d = t.Tile(b, zoomLevel)
 		//fmt.Printf("c,d: %v, %v\n", c, d)
 		// Obtain the resulting lat/lon outer bounds
-		e, f := GenericBoundsFromTiles(t, c, d)
+		e, f := t.BoundsFromTiles(c, d)
 		// Calculate the resulting width and height
 		w2 := math.Abs(f.Lon - e.Lon)
 		h2 := math.Abs(f.Lat - e.Lat)
@@ -150,30 +150,24 @@ func GenericTilesFromBounds(t TileMapper, a LatLon, b LatLon, maxWidth uint, max
 	return c, ShiftToBottomRight(d)
 }
 
-// GenericBoundsFromTiles should return the lat/lon pairs that encompass
-// a set of tiles - this code is insufficiently generic in handling
-// the bottom/right side of the map.
-//
-// Options seem to be to either change the TileMapper to return lat/lon
-// bounds of a tile instead of top/left, or to require that they
-// respond properly to a request for a tile beyond the border, or to
-// have the tilemapper know and provide the map borders
-func GenericBoundsFromTiles(t TileMapper, a Tile, b Tile) (LatLon, LatLon) {
+// GenericBoundsFromTiles returns the lat/lon pairs that encompass
+// a set of tiles
+func GenericBoundsFromTiles(t TileMapper, a Tile, b Tile, rightbottom LatLon) (LatLon, LatLon) {
 	// left is easy
 	var c, d LatLon
 	c = t.LatLon(a)
 	max := uint(2<<uint(b.Z) - 1)
 	if b.X == max {
 		if b.Y == max {
-			d = LatLon{180, -85.0511}
+			d = rightbottom
 		} else {
 			d = t.LatLon(Tile{b.X, b.Y + 1, b.Z})
-			d.Lon = 180
+			d.Lon = rightbottom.Lon
 		}
 	} else {
 		if b.Y == max {
 			d = t.LatLon(Tile{b.X + 1, b.Y, b.Z})
-			d.Lat = -85.0511
+			d.Lat = rightbottom.Lat
 		} else {
 			d = t.LatLon(Tile{b.X + 1, b.Y + 1, b.Z})
 		}
@@ -226,5 +220,5 @@ func (o OSMTileMapper) TilesFromBounds(a LatLon, b LatLon, maxWidth uint, maxHei
 }
 
 func (o OSMTileMapper) BoundsFromTiles(a Tile, b Tile) (LatLon, LatLon) {
-	return GenericBoundsFromTiles(o, a, b)
+	return GenericBoundsFromTiles(o, a, b, LatLon{-85.0511, 180})
 }

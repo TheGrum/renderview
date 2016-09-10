@@ -134,6 +134,44 @@ func (m *TileRenderModel) InnerRender() {
 			draw.Draw(img, image.Rect(offsetP.X+j*int(tileSizeX), offsetP.Y+i*int(tileSizeY), offsetP.X+(j+1)*int(tileSizeX), offsetP.Y+(i+1)*int(tileSizeY)), i2, image.ZP, draw.Src)
 			m.RequestPaint()
 		}
+	case FallbackTileProvider:
+		tiles := t.RenderTileRange(c, d)
+		usedFallback := t.UsedFallback()
+		if len(tiles) > 0 {
+			i2 := tiles[0].Img
+			if i2 == nil {
+				for _, k := range tiles {
+					if k.Img != nil {
+						i2 = k.Img
+						break
+					}
+				}
+				if i2 == nil {
+					panic("Unable to find image")
+				}
+			}
+			tileSizeX = float64(i2.Bounds().Dx())
+			tileLonWidth := tileSizeX / (cb.Lon - ca.Lon)
+			offsetP.X = int(math.Floor((modA.Lon - a.Lon) * tileLonWidth))
+			tileSizeY = float64(i2.Bounds().Dy())
+			tileLatHeight := tileSizeY / (cb.Lat - ca.Lat)
+			offsetP.Y = int(math.Floor((modA.Lat - a.Lat) * tileLatHeight))
+			// Now correct right/bottom to actual screen range
+			//m.left.SetValueFloat64(a.Lon + tileLonWidth*float64(m.width.GetValueInt()))
+			//m.bottom.SetValueFloat64(a.Lat + tileLatHeight*float64(m.height.GetValueInt()))
+		}
+		for _, k := range tiles {
+			i = int(k.Tile.Y - c.Y)
+			j = int(k.Tile.X - c.X)
+			i2 := k.Img
+			draw.Draw(img, image.Rect(offsetP.X+j*int(tileSizeX), offsetP.Y+i*int(tileSizeY), offsetP.X+(j+1)*int(tileSizeX), offsetP.Y+(i+1)*int(tileSizeY)), i2, image.ZP, draw.Src)
+			m.RequestPaint()
+		}
+		if usedFallback {
+			// There are fallback tiles present, so queue another render
+			m.NeedsRender = true
+			m.RequestPaint()
+		}
 	case AdvancedTileProvider:
 		tiles := t.RenderTileRange(c, d)
 		if len(tiles) > 0 {
@@ -156,8 +194,9 @@ func (m *TileRenderModel) InnerRender() {
 			tileLatHeight := tileSizeY / (cb.Lat - ca.Lat)
 			offsetP.Y = int(math.Floor((modA.Lat - a.Lat) * tileLatHeight))
 			// Now correct right/bottom to actual screen range
-			m.left.SetValueFloat64(a.Lon + tileLonWidth*float64(m.width.GetValueInt()))
-			m.bottom.SetValueFloat64(a.Lat + tileLatHeight*float64(m.height.GetValueInt()))
+			//fmt.Printf("a.Lon %v modA.Lon %v ca.Lon %v cb.Lon %v tileLonWidth %v Expected right lon %v actual right lon %v offsetP.X %v\n", a.Lon, modA.Lon, ca.Lon, cb.Lon, tileLonWidth, a.Lon+float64(m.width.GetValueInt())/tileLonWidth, b.Lon, offsetP.X)
+			//m.left.SetValueFloat64(a.Lon + float64(m.width.GetValueInt()-1)/tileLonWidth)
+			//m.bottom.SetValueFloat64(a.Lat + float64(m.height.GetValueInt()-1)/tileLatHeight)
 		}
 		for _, k := range tiles {
 			i = int(k.Tile.Y - c.Y)

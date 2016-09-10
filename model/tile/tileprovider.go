@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"image/draw"
 	"image/png"
 	"io/ioutil"
 	"log"
@@ -55,7 +56,7 @@ func (p *TestTileProvider) RenderTile(t Tile) image.Image {
 	gc.SetFontSize(12)
 	gc.MoveTo(0, 0)
 	gc.FillStringAt(fmt.Sprintf("Tile %dZ, %dY, %dX", t.Z, t.Y, t.X), 10, 70)
-	fmt.Printf("Tile %dZ, %dY, %dX", t.Z, t.Y, t.X)
+	//fmt.Printf("Tile %dZ, %dY, %dX", t.Z, t.Y, t.X)
 	return img
 }
 
@@ -99,4 +100,50 @@ func (o *OSMTileProvider) RenderTile(t Tile) image.Image {
 		return image.NewRGBA(image.Rect(0, 0, 1, 1))
 	}
 	return tile
+}
+
+type CompositingTileProvider struct {
+	providers []TileProvider
+}
+
+func NewCompositingTileProvider(providers ...TileProvider) *CompositingTileProvider {
+	c := CompositingTileProvider{
+		providers: make([]TileProvider, len(providers), len(providers)),
+	}
+	copy(c.providers, providers)
+	return &c
+}
+
+func (c *CompositingTileProvider) RenderTile(t Tile) image.Image {
+	var img draw.Image
+	for i, p := range c.providers {
+		piece := p.RenderTile(t)
+		if piece != nil {
+			switch drawpiece := piece.(type) {
+			case *image.RGBA:
+				if i == 0 || img == nil {
+					img = drawpiece
+				} else {
+					draw.Draw(img, img.Bounds(), drawpiece, image.ZP, draw.Over)
+				}
+			case *image.NRGBA:
+				if i == 0 || img == nil {
+					img = drawpiece
+				} else {
+					draw.Draw(img, img.Bounds(), drawpiece, image.ZP, draw.Over)
+				}
+
+			default:
+				// not an RGBA or NRGBA
+				if i == 0 || img == nil {
+					// make one and copy to it
+					img = image.NewRGBA(drawpiece.Bounds())
+					draw.Draw(img, img.Bounds(), drawpiece, image.ZP, draw.Src)
+				} else {
+					draw.Draw(img, img.Bounds(), drawpiece, image.ZP, draw.Over)
+				}
+			}
+		}
+	}
+	return img
 }
