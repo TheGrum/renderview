@@ -5,7 +5,6 @@
 package model
 
 import (
-	"fmt"
 	"image"
 	"image/draw"
 	"math"
@@ -103,7 +102,7 @@ func (m *TileRenderModel) InnerRender() {
 	a := LatLon{m.top.GetValueFloat64(), m.left.GetValueFloat64()}
 	b := LatLon{m.bottom.GetValueFloat64(), m.right.GetValueFloat64()}
 	c, d := m.mapper.TilesFromBounds(a, b, uint(img.Bounds().Dx()), uint(img.Bounds().Dy()))
-	modA, modB := m.mapper.BoundsFromTiles(c, d)
+	modA, _ := m.mapper.BoundsFromTiles(c, d)
 	ca, cb := m.mapper.BoundsFromTiles(c, c)
 
 	var tileSizeX, tileSizeY float64
@@ -112,6 +111,29 @@ func (m *TileRenderModel) InnerRender() {
 	m.Rendering = true
 	w, h := d.X-c.X, d.Y-c.Y
 	switch t := m.provider.(type) {
+	case StreamingTileProvider:
+		tilech := t.StreamTileRange(c, d)
+		i = 0
+		for k := range tilech {
+			i2 := k.Img
+			if (i == 0) && i2 != nil {
+				tileSizeX = float64(i2.Bounds().Dx())
+				tileLonWidth := tileSizeX / (cb.Lon - ca.Lon)
+				offsetP.X = int(math.Floor((modA.Lon - a.Lon) * tileLonWidth))
+				tileSizeY = float64(i2.Bounds().Dy())
+				tileLatHeight := tileSizeY / (cb.Lat - ca.Lat)
+				offsetP.Y = int(math.Floor((modA.Lat - a.Lat) * tileLatHeight))
+				// Now correct right/bottom to actual screen range
+				//				m.left.SetValueFloat64(a.Lon + tileLonWidth*tileSizeX*float64(w))
+				//				m.bottom.SetValueFloat64(a.Lat + tileLatHeight*tileSizeX*float64(h))
+				i = 1
+			}
+			i = int(k.Tile.Y - c.Y)
+			j = int(k.Tile.X - c.X)
+			i2 = k.Img
+			draw.Draw(img, image.Rect(offsetP.X+j*int(tileSizeX), offsetP.Y+i*int(tileSizeY), offsetP.X+(j+1)*int(tileSizeX), offsetP.Y+(i+1)*int(tileSizeY)), i2, image.ZP, draw.Src)
+			m.RequestPaint()
+		}
 	case AdvancedTileProvider:
 		tiles := t.RenderTileRange(c, d)
 		if len(tiles) > 0 {
@@ -128,25 +150,21 @@ func (m *TileRenderModel) InnerRender() {
 				}
 			}
 			tileSizeX = float64(i2.Bounds().Dx())
-			actualWidth := tileSizeX * float64(w)
-			actualLonRange := modB.Lon - modA.Lon
-			tileLonWidth := tileSizeX / (cb.Lon - ca.Lon) // actualWidth / actualLonRange
+			tileLonWidth := tileSizeX / (cb.Lon - ca.Lon)
 			offsetP.X = int(math.Floor((modA.Lon - a.Lon) * tileLonWidth))
-			fmt.Printf("targetLon %v caLon %v cbLon %v tileSizeX %v, actualWidth %v, actualLonRange %v, tileLonWidth %v, offsetP.X %v\n", a.Lon, ca.Lon, cb.Lon, tileSizeX, actualWidth, actualLonRange, tileLonWidth, offsetP.X)
 			tileSizeY = float64(i2.Bounds().Dy())
-			//			actualHeight := tileSizeY * float64(h)
-			//			actualLatRange := modB.Lat - modA.Lat
-			tileLatHeight := tileSizeY / (cb.Lat - ca.Lat) //actualHeight / actualLatRange
+			tileLatHeight := tileSizeY / (cb.Lat - ca.Lat)
 			offsetP.Y = int(math.Floor((modA.Lat - a.Lat) * tileLatHeight))
-			fmt.Printf("Offset calculated %v\n", offsetP)
-			//offsetP.X = 0
-			//offsetP.Y = 0
+			// Now correct right/bottom to actual screen range
+			m.left.SetValueFloat64(a.Lon + tileLonWidth*float64(m.width.GetValueInt()))
+			m.bottom.SetValueFloat64(a.Lat + tileLatHeight*float64(m.height.GetValueInt()))
 		}
 		for _, k := range tiles {
 			i = int(k.Tile.Y - c.Y)
 			j = int(k.Tile.X - c.X)
 			i2 := k.Img
 			draw.Draw(img, image.Rect(offsetP.X+j*int(tileSizeX), offsetP.Y+i*int(tileSizeY), offsetP.X+(j+1)*int(tileSizeX), offsetP.Y+(i+1)*int(tileSizeY)), i2, image.ZP, draw.Src)
+			m.RequestPaint()
 		}
 	case TileProvider:
 		for i = 0; i < int(w); i++ {
@@ -154,17 +172,17 @@ func (m *TileRenderModel) InnerRender() {
 				i2 := t.RenderTile(Tile{c.Z, c.Y + uint(i), c.X + uint(j)})
 				if i == 0 && j == 0 {
 					tileSizeX = float64(i2.Bounds().Dx())
-					actualWidth := tileSizeX * float64(w)
-					actualLonRange := modB.Lon - modA.Lon
-					tileLonWidth := actualLonRange / actualWidth
-					offsetP.X = int(math.Floor((a.Lon - modA.Lon) * tileSizeX / tileLonWidth))
+					tileLonWidth := tileSizeX / (cb.Lon - ca.Lon)
+					offsetP.X = int(math.Floor((modA.Lon - a.Lon) * tileLonWidth))
 					tileSizeY = float64(i2.Bounds().Dy())
-					actualHeight := tileSizeY * float64(h)
-					actualLatRange := modB.Lat - modA.Lat
-					tileLatHeight := actualLatRange / actualHeight
-					offsetP.Y = int(math.Floor((a.Lat - modA.Lat) * tileSizeY / tileLatHeight))
+					tileLatHeight := tileSizeY / (cb.Lat - ca.Lat)
+					offsetP.Y = int(math.Floor((modA.Lat - a.Lat) * tileLatHeight))
+					// Now correct right/bottom to actual screen range
+					//					m.left.SetValueFloat64(a.Lon + tileLonWidth*tileSizeX*float64(w))
+					//					m.bottom.SetValueFloat64(a.Lat + tileLatHeight*tileSizeX*float64(h))
 				}
 				draw.Draw(img, image.Rect(0, 0, int(tileSizeX), int(tileSizeY)), i2, image.Point{offsetP.X + j*int(tileSizeX), offsetP.Y + i*int(tileSizeY)}, draw.Src)
+				m.RequestPaint()
 			}
 		}
 	}

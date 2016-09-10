@@ -96,6 +96,17 @@ type TileMapper interface {
 	BoundsFromTiles(a Tile, b Tile) (LatLon, LatLon)
 }
 
+func ShiftToBottomRight(t Tile) Tile {
+	max := uint(2<<uint(t.Z) - 1)
+	if t.X < max {
+		t.X += 1
+	}
+	if t.Y < max {
+		t.Y += 1
+	}
+	return t
+}
+
 // A generic, mechanical method for determining a proper zoom level and set of
 // tiles for a given image dimension and coordinate range by iteration, such that
 // the image resulting from rendering the given tiles and cutting to the
@@ -134,7 +145,9 @@ func GenericTilesFromBounds(t TileMapper, a LatLon, b LatLon, maxWidth uint, max
 			break
 		}
 	}
-	return c, d
+	// push d to bottom right since left/top can actually be
+	// within tile c, shifting image up and to the left
+	return c, ShiftToBottomRight(d)
 }
 
 // GenericBoundsFromTiles should return the lat/lon pairs that encompass

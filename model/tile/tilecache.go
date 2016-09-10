@@ -4,10 +4,7 @@
 
 package model
 
-import (
-	"fmt"
-	"image"
-)
+import "image"
 
 type TileImage struct {
 	populated bool
@@ -36,10 +33,20 @@ type TileCache struct {
 	maxItems uint
 }
 
+type StreamingTileCache struct {
+	TileCache
+}
+
 type AdvancedTileProvider interface {
 	TileProvider
 
 	RenderTileRange(a Tile, b Tile) []TileImage
+}
+
+type StreamingTileProvider interface {
+	TileProvider
+
+	StreamTileRange(a Tile, b Tile) chan TileImage
 }
 
 func NewTileCache(provider TileProvider, maxItems uint) *TileCache {
@@ -47,6 +54,12 @@ func NewTileCache(provider TileProvider, maxItems uint) *TileCache {
 		cache:    make([]TileImage, 0, 100),
 		provider: provider,
 		maxItems: maxItems,
+	}
+}
+
+func NewStreamingTileCache(provider TileProvider, maxItems uint) *StreamingTileCache {
+	return &StreamingTileCache{
+		TileCache: *NewTileCache(provider, maxItems),
 	}
 }
 
@@ -122,7 +135,6 @@ func (c *TileCache) RenderTileRange(a Tile, b Tile) []TileImage {
 	a, b = SwapIfNeeded(a, b)
 	w := b.X - a.X + 1
 	h := b.Y - a.Y + 1
-	fmt.Printf("a(%v) b(%v) w(%v) h(%v)\n", a, b, w, h)
 
 	// We don't use ZoomFilter(c.cache, a.Z) here
 	// because we want to efficiently move the found
@@ -137,9 +149,7 @@ func (c *TileCache) RenderTileRange(a Tile, b Tile) []TileImage {
 	for _, k := range c.cache {
 		if k.Tile.IsInside(a, b) {
 			// this is one of the requested images
-			//fmt.Printf("checking a(%v) k(%v) pos %d\n", a, k, (k.Tile.Y-a.Y)*w+(k.Tile.X-a.X))
 			found[(k.Tile.Y-a.Y)*w+(k.Tile.X-a.X)] = k
-			//fmt.Printf("Found tile (%v)\n", k)
 			fcache = append(fcache, k)
 		} else {
 			nfcache = append(nfcache, k)
@@ -155,7 +165,6 @@ func (c *TileCache) RenderTileRange(a Tile, b Tile) []TileImage {
 			if k.populated == false {
 				tile := Tile{a.X + uint(j), a.Y + uint(i), a.Z}
 				k = TileImage{true, tile, c.provider.RenderTile(tile)}
-				fmt.Printf("%v\n", k)
 				found[i*int(w)+j] = k
 				fcache = append(fcache, k)
 			}
@@ -165,7 +174,6 @@ func (c *TileCache) RenderTileRange(a Tile, b Tile) []TileImage {
 	// At the end of this process, fcache holds all the returned tiles
 	// and nfcache holds what was not returned, so for LRU,
 	// we want the last maxItems from nfcache+fcache
-	//fmt.Printf("maxItems(%d), fcache(%v), nfcache(%v)\n", c.maxItems, fcache, nfcache)
 	fnum := len(fcache)
 	nnum := len(nfcache)
 
@@ -182,6 +190,85 @@ func (c *TileCache) RenderTileRange(a Tile, b Tile) []TileImage {
 		c.cache = fcache[len(fcache)-fnum:]
 	}
 
-	//	fmt.Printf("Returning %v\n", found)
 	return found
+}
+
+// Renders all tiles in the requested range and returns them
+// This returns TileImages instead of merely images
+// because the items are returned in an indeterminate order
+// use the Tile to determine their position. a and b should
+// be on the same zoom level
+func (c *TileCache) StreamTileRange(a Tile, b Tile) chan TileImage {
+	ch := make(chan TileImage, 20)
+	go func() {
+		if a.Z != b.Z {
+			close(ch)
+			return
+		}
+
+		// make sure that we can compare to a and b to determine if tile t is contained within
+		a, b = SwapIfNeeded(a, b)
+		w := b.X - a.X + 1
+		h := b.Y - a.Y + 1
+
+		// We don't use ZoomFilter(c.cache, a.Z) here
+		// because we want to efficiently move the found
+		// items forward in the cache
+		nfcache := make([]TileImage, 0, len(c.cache))
+		fcache := make([]TileImage, 0, len(c.cache))
+
+		// remember what we've found so far in here so
+		// we know what to go and render at the end
+		found := make([]TileImage, w*h, w*h)
+
+		for _, k := range c.cache {
+			if k.Tile.IsInside(a, b) {
+				// this is one of the requested images
+				found[(k.Tile.Y-a.Y)*w+(k.Tile.X-a.X)] = k
+				ch <- k
+				fcache = append(fcache, k)
+			} else {
+				nfcache = append(nfcache, k)
+			}
+		}
+
+		// Render all missing tiles and add them to the fcache
+		for i := 0; i < int(h); i++ {
+			for j := 0; j < int(w); j++ {
+				//fmt.Printf("Checking i %d, j %d, kpos %d\n", i, j, i*int(w)+j)
+				k := found[i*int(w)+j]
+				//fmt.Printf("Checking k(%v)\n", k)
+				if k.populated == false {
+					tile := Tile{a.X + uint(j), a.Y + uint(i), a.Z}
+					k = TileImage{true, tile, c.provider.RenderTile(tile)}
+					ch <- k
+					found[i*int(w)+j] = k
+					fcache = append(fcache, k)
+				}
+			}
+		}
+
+		// At the end of this process, fcache holds all the returned tiles
+		// and nfcache holds what was not returned, so for LRU,
+		// we want the last maxItems from nfcache+fcache
+		fnum := len(fcache)
+		nnum := len(nfcache)
+
+		if fnum > int(c.maxItems) {
+			fnum = int(c.maxItems)
+			nnum = 0
+		} else if nnum+fnum > int(c.maxItems) {
+			nnum = int(c.maxItems) - fnum
+		}
+
+		if nnum > 0 {
+			c.cache = append(nfcache[len(nfcache)-nnum:], fcache...)
+		} else {
+			c.cache = fcache[len(fcache)-fnum:]
+		}
+		close(ch)
+
+	}()
+
+	return ch
 }
