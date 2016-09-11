@@ -103,10 +103,10 @@ This one line example takes a python command line plot generator, and turns it i
 
 # Screenshots #
 
-[Mandelbrot](http://i.imgur.com/11H40dZ.png)
-[cmdgui plot](http://i.imgur.com/VQSrwRv.png)
-[maze](http://i.imgur.com/XG75kpZ.png)
-[maze2](http://i.imgur.com/qCrmmUe.png)
-[lsystem](http://i.imgur.com/kOvCrCR.png)
-[map](http://i.imgur.com/MIwJRa5.png)
+![Mandelbrot](http://i.imgur.com/11H40dZ.png)
+![cmdgui plot](http://i.imgur.com/VQSrwRv.png)
+![maze](http://i.imgur.com/XG75kpZ.png)
+![maze2](http://i.imgur.com/qCrmmUe.png)
+![lsystem](http://i.imgur.com/kOvCrCR.png)
+![map](http://i.imgur.com/MIwJRa5.png)
 
