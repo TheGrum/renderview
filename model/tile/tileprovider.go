@@ -62,16 +62,14 @@ func (p *TestTileProvider) RenderTile(t Tile) image.Image {
 
 type OSMTileProvider struct {
 	ServerURL string
+	client    *http.Client
 }
 
 func NewOSMTileProvider(ServerURL string) *OSMTileProvider {
-	return &OSMTileProvider{
+	o := OSMTileProvider{
 		ServerURL: ServerURL,
 	}
-}
-
-func (o *OSMTileProvider) RenderTile(t Tile) image.Image {
-	client := &http.Client{
+	o.client = &http.Client{
 		Transport: &http.Transport{
 			Dial: func(network, addr string) (net.Conn, error) {
 				//log.Println("Dial!")
@@ -80,15 +78,20 @@ func (o *OSMTileProvider) RenderTile(t Tile) image.Image {
 			MaxIdleConnsPerHost: 50,
 		},
 	}
+	return &o
+}
+
+func (o *OSMTileProvider) RenderTile(t Tile) image.Image {
 	request := o.ServerURL
 	request = strings.Replace(request, "$Z", strconv.Itoa(int(t.Z)), -1)
 	request = strings.Replace(request, "$Y", strconv.Itoa(int(t.Y)), -1)
 	request = strings.Replace(request, "$X", strconv.Itoa(int(t.X)), -1)
-	resp, err := client.Get(request)
+	resp, err := o.client.Get(request)
 	if err != nil {
 		log.Println(err)
 		return image.NewRGBA(image.Rect(0, 0, 1, 1))
 	}
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Println(err)

@@ -179,12 +179,21 @@ func NewGtkRenderWidget(r rv.RenderModel) *GtkRenderWidget {
 	w.R.SetRequestPaintFunc(func() {
 		//w.UpdateParamWidgets()
 		w.needsUpdate = true
-		w.QueueDraw()
+		w.needsPaint = true
+		//w.QueueDraw()
 		//w.GetWindow().Invalidate(nil, false)
 	})
 	w.SetCanFocus(true)
 	//	w.SetFocusOnClick(true) // missing?
 	w.SetEvents(int(gdk.POINTER_MOTION_MASK | gdk.BUTTON_PRESS_MASK | gdk.BUTTON_RELEASE_MASK | gdk.EXPOSURE_MASK | gdk.SCROLL_MASK | gdk.KEY_PRESS_MASK))
+	// This doesn't seem to actually work?
+	glib.TimeoutAdd(3000, func() int {
+		if w.needsPaint {
+			w.QueueDraw()
+		}
+		return 1
+	})
+
 	return w
 }
 
@@ -395,6 +404,10 @@ func (w *GtkRenderWidget) OnMotion(e *gdk.EventMotion) {
 	//	fmt.Printf("Motion: X:%v Y:%v sx:%v sy:%v mouseIsDown:%v dragging:%v\n", e.X, e.Y, w.sx, w.sy, w.mouseIsDown, w.dragging)
 	w.mouseX.SetValueFloat64(float64(e.X))
 	w.mouseY.SetValueFloat64(float64(e.Y))
+
+	if w.needsPaint {
+		w.QueueDraw()
+	}
 
 	if w.mouseIsDown && w.dragging == false {
 		if ((e.X - w.sx) > 3) || ((w.sx - e.X) > 3) || ((e.Y - w.sy) > 3) || ((w.sy - e.Y) > 3) {
