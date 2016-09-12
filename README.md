@@ -103,6 +103,22 @@ Alternately, you can fully specify your parameters, like so:
   		rv.NewIntRP("mazeheight", 100))...)
 ```
 
+#### Useful parameters
+
+You can have as many parameters as you like, but certain paramaters if present have special meaning to the views.
+
+ * left,top,right,bottom - these can be either int or float64, and when available, operate panning, and if float64, zooming. - two way, you can change these in your code to move the viewport if you are paying attention to them
+ * width,height - these get populated with the window width and height - changing these in your code has no effect.
+ * options - maybe more later, right now these just control the zooming (done with the scroll-wheel)
+const (
+	OPT_NONE        = iota      // 0
+	OPT_CENTER_ZOOM = 1 << iota // 1
+	OPT_AUTO_ZOOM   = 1 << iota // 2
+)
+ * zoom - int or float64, this gets incremented/decremented when the scroll-wheel is turned, and can be used to implement your own zoom.
+ * mouseX, mouseY - float64, these get populated with the current mouse position in the window
+ * page - this gets incremented/decremented by PgUp and PgDown when the graphical window has the focus, allowing for a paged environment. You can manipulated these from a custom zoom parameter to tie scrolling to paging if desired.
+
 See examples and cmd for more.
 
 Some examples require -tags "example" to build.
