@@ -281,7 +281,7 @@ func GetWidgetMainLoop(r rv.RenderModel) func(s screen.Screen) {
 func expand(n node.Node, expandAlongWeight int) node.Node {
 	return widget.WithLayoutData(n, widget.FlowLayoutData{
 		ExpandAcross:      true,
-		ExpandAlongWeight: expandAlongWeight,
+		AlongWeight: expandAlongWeight,
 	})
 }
 
