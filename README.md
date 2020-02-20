@@ -8,7 +8,7 @@ Install:
 go get github.com/TheGrum/renderview
 ```
 
-Needs either Shiny (limited functionality), go-gtk, or gotk3. The latter two require the corresponding GTK library installed.
+Needs either Shiny (limited functionality), Gio, go-gtk, or gotk3. The latter two require the corresponding GTK library installed.
 
 =====
 
@@ -31,6 +31,13 @@ The eponymous control, this comes in multiple flavors, and handles window creati
 Shiny is an experimental native cross-platform GUI package for Go. At the moment it is usable only as a framebuffer+event loop. If all you need is the output of your image generation function with panning and zooming, RenderView+Shiny supports that.
 
 Build with -tags "shiny nogtk2" to use the Shiny backend.
+
+#### Gio
+
+Gio is an immediate-mode GUI package for Go. RenderView on the Gio backend supports
+automatic parameter editing widget generation in addition to the interactive image.
+
+Build with -tags "gio nogtk2" to use the Gio backend.
 
 #### go-gtk 
 
