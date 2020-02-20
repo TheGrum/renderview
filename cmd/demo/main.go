@@ -5,7 +5,7 @@
 package main
 
 import (
-	"renderview/driver"
+	"github.com/TheGrum/renderview/driver"
 
 	"github.com/TheGrum/renderview/examples/mandelbrot"
 )
