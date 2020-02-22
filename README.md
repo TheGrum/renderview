@@ -8,7 +8,7 @@ Install:
 go get github.com/TheGrum/renderview
 ```
 
-Needs either Shiny (limited functionality), Gio, go-gtk, or gotk3. The latter two require the corresponding GTK library installed.
+Needs either Shiny (limited functionality), Gio, Fyne, go-gtk, or gotk3. The latter two require the corresponding GTK library installed. Gio and Fyne have their own requirements.
 
 =====
 
@@ -39,6 +39,13 @@ automatic parameter editing widget generation in addition to the interactive ima
 
 Build with -tags "gio nogtk2" to use the Gio backend.
 
+#### Fyne
+
+Fyne is a Material-design influenced GUI package for Go. RenderView on the Fyne backend supports automatic parameter editing widget generation in addition to the interactive 
+image.
+
+Build with -tags "fyne nogtk2" to use the Fyne backend.
+
 #### go-gtk 
 
 go-gtk is a functional CGo based GTK2 binding. RenderView on the go-gtk backend supports automatic parameter editing widget generation in addition to the interactive image.
@@ -47,13 +54,14 @@ This is currently the default backend, so no -tags line is required.
 
 #### gotk3 
 
-gotk3 is a functional CGo based GTK3 binding. RenderView on the gotk3 backend supports automatic parameter editing widget generation in addition to the interactive image.
+gotk3 is a functional CGo based GTK3 binding. RenderView on the gotk3 backend supports automatic parameter editing widget generation in addition to the interactive image. Note
+that on first build, the gotk3 package may be noticeably slow to build.
 
 Build with -tags "gotk3 nogtk2" to use the gotk3 backend.
 
 ### RenderParameter 
 
-Each RenderParameter carries a type string, allowing the renderView code to read and set the values without reflection. There is also a blank parameter that is automatically returned when a missing parameter is requested, allowing the RenderView code to behave as if the parameters it uses are always present. By either including or omitting the default parameters, you can control whether your code pays attention to certain controller behaviors.
+Each RenderParameter carries a type string, allowing the RenderView code to read and set the values without reflection. There is also a blank parameter that is automatically returned when a missing parameter is requested, allowing the RenderView code to behave as if the parameters it uses are always present. By either including or omitting the default parameters, you can control whether your code pays attention to certain controller behaviors.
 
 Hints can be provided to indicate whether parameters are only for use in communicating with the View and Controller, or should be exposed to the user.
 
